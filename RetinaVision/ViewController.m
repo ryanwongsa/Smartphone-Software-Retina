@@ -6,9 +6,44 @@
 //  Copyright © 2017 Ryan Wong. All rights reserved.
 //
 
-#import "ViewController.h"
+#import <Photos/Photos.h>
 
-@interface ViewController ()
+#import <opencv2/core.hpp>
+#import <opencv2/imgcodecs.hpp>
+#import <opencv2/imgcodecs/ios.h>
+#import <opencv2/imgproc.hpp>
+
+#import "ViewController.h"
+#import "VideoCamera.h"
+
+@interface ViewController () <CvVideoCameraDelegate> {
+    cv::Mat originalStillMat;
+    cv::Mat updatedStillMatGray;
+    cv::Mat updatedStillMatRGBA;
+    cv::Mat updatedVideoMatGray;
+    cv::Mat updatedVideoMatRGBA;
+}
+
+@property IBOutlet UIImageView *imageView;
+@property IBOutlet UIActivityIndicatorView *activityIndicatorView;
+@property IBOutlet UIToolbar *toolbar;
+
+@property VideoCamera *videoCamera;
+@property BOOL saveNextFrame;
+
+- (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
+- (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
+- (IBAction)onSwitchCameraButtonPressed;
+- (IBAction)onSaveButtonPressed;
+
+- (void)refresh;
+- (void)processImage:(cv::Mat &)mat;
+- (void)processImageHelper:(cv::Mat &)mat;
+- (void)saveImage:(UIImage *)image;
+- (void)showSaveImageFailureAlertWithMessage:(NSString *)message;
+- (void)showSaveImageSuccessAlertWithImage:(UIImage *)image;
+- (void)startBusyMode;
+- (void)stopBusyMode;
 
 @end
 
