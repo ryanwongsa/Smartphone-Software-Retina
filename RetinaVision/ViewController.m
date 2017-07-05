@@ -51,8 +51,17 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
+    
+    UIImage *originalStillImage = [UIImage imageNamed:@"home.png"];
+    UIImageToMat(originalStillImage, originalStillMat);
+    
+    self.videoCamera = [[VideoCamera alloc] initWithParentView:self.imageView];
+    self.videoCamera.delegate = self;
+    self.videoCamera.defaultAVCaptureSessionPreset  = AVCaptureSessionPresetHigh;
+    self.videoCamera.defaultFPS = 30;
+    self.videoCamera.letterboxPreview = YES;
 }
+
 
 
 - (void)didReceiveMemoryWarning {
