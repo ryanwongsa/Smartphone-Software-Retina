@@ -18,9 +18,9 @@
 
 @interface ViewController () <CvVideoCameraDelegate> {
     cv::Mat originalStillMat;
-    cv::Mat updatedStillMatGray;
+    cv::Mat updatedStillMatRetina;
     cv::Mat updatedStillMatRGBA;
-    cv::Mat updatedVideoMatGray;
+    cv::Mat updatedVideoMatRetina;
     cv::Mat updatedVideoMatRGBA;
 }
 
@@ -30,6 +30,7 @@
 
 @property VideoCamera *videoCamera;
 @property BOOL saveNextFrame;
+@property int viewMode;
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -58,16 +59,219 @@
     self.videoCamera = [[VideoCamera alloc] initWithParentView:self.imageView];
     self.videoCamera.delegate = self;
     self.videoCamera.defaultAVCaptureSessionPreset  = AVCaptureSessionPresetHigh;
-    self.videoCamera.defaultFPS = 30;
+//    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
 }
 
+-(void)viewDidLayoutSubviews{
+    [super viewDidLayoutSubviews];
+    
+    switch ([UIDevice currentDevice].orientation){
+        case UIDeviceOrientationPortraitUpsideDown:
+            self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            break;
+        case UIDeviceOrientationLandscapeLeft:
+            self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+            break;
+        case UIDeviceOrientationLandscapeRight:
+            self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            break;
+        default:
+            self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationPortrait;
+            break;
+    }
+    
+    [self refresh];
+}
 
+-(IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture{
+    if (tapGesture.state == UIGestureRecognizerStateEnded){
+        if(self.videoCamera.running){
+            CGPoint tapPoint = [tapGesture locationInView:self.imageView];
+            [self.videoCamera setPointOfInterestInParentViewSpace:tapPoint];
+        }
+    }
+}
+
+-(IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl{
+    switch (segmentedControl.selectedSegmentIndex){
+        case 0:
+            self.viewMode = 0;
+            break;
+        default:
+            self.viewMode = 1;
+            break;
+    }
+    [self refresh];
+}
+
+-(IBAction)onSwitchCameraButtonPressed  {
+
+    if (self.videoCamera.running){
+        switch(self.videoCamera.defaultAVCaptureDevicePosition){
+            case AVCaptureDevicePositionFront:
+                self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
+                [self refresh];
+                break;
+            default:
+                [self.videoCamera stop];
+                [self refresh];
+                break;
+        }
+    } else {
+        // Hide the still image.
+        self.imageView.image = nil;
+
+        self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
+        [self.videoCamera start];
+    }
+}
+
+-(void)refresh{
+    if (self.videoCamera.running){
+        // Hide the still image.
+        self.imageView.image = nil;
+        
+        // Restart the video.
+        [self.videoCamera stop];
+        [self.videoCamera start];
+    }
+    else{
+        // Refresh the still image.
+        UIImage *image;
+        //cv::cvtColor(originalStillMat, updatedStillMatRetina, cv::COLOR_RGBA2GRAY);
+        originalStillMat.copyTo(updatedStillMatRetina);
+        // processimage to update it.
+        [self processImage:updatedStillMatRetina];
+        image = MatToUIImage(updatedStillMatRetina);
+        
+        self.imageView.image = image;
+    }
+}
+
+-(void)processImage:(cv::Mat &)mat {
+    if (self.videoCamera.running) {
+        switch (self.videoCamera.defaultAVCaptureVideoOrientation){
+            case AVCaptureVideoOrientationLandscapeLeft:
+            case AVCaptureVideoOrientationLandscapeRight:
+                // The landscape video is captured upside-down.
+                // Rotate it by 180 degrees
+                cv::flip(mat, mat,-1);
+                break;
+            default:
+                break;
+        }
+    }
+    
+    [self processImageHelper:mat];
+
+    if (self.saveNextFrame){
+        // The video frame, 'mat', is not safe for long running
+        // operations such as saving to file. Thus, we copy its
+        // data to another cv::Mat first.
+        UIImage *image;
+        if (self.viewMode == 0){
+            mat.copyTo(updatedStillMatRetina);
+            image = MatToUIImage(updatedStillMatRetina);
+        } else {
+            // TODO: Change to processImageHelper
+            cv::cvtColor(mat, updatedVideoMatRGBA, cv::COLOR_BGRA2RGBA);
+            
+            image = MatToUIImage(updatedVideoMatRGBA);
+        }
+        [self saveImage:image];
+        self.saveNextFrame = NO;
+    }
+}
+
+-(void)processImageHelper:(cv::Mat &)mat{
+    if (self.viewMode == 1){
+        cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
+    } else {
+        
+    }
+}
+
+-(void)startBusyMode{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.activityIndicatorView startAnimating];
+        for (UIBarItem *item in self.toolbar.items){
+            item.enabled = NO;
+        }
+    });
+}
+
+-(void)stopBusyMode {
+    dispatch_async(dispatch_get_main_queue(),^{
+        [self.activityIndicatorView stopAnimating];
+        for (UIBarItem *item in self.toolbar.items){
+            item.enabled=YES;
+        }
+    });
+}
+
+-(IBAction)onSaveButtonPressed{
+    [self startBusyMode];
+    if(self.videoCamera.running){
+        self.saveNextFrame = YES;
+    } else {
+        [self saveImage:self.imageView.image];
+    }
+}
+
+-(void)saveImage:(UIImage *)image{
+    // Try to save the image to a temporary file.
+    NSString *outputPath = [NSString stringWithFormat:@"%@%@", NSTemporaryDirectory(),@"output.png"];
+    if(![UIImagePNGRepresentation(image) writeToFile:outputPath atomically:YES]){
+        // Show an alert describing the failure.
+        [self showSaveImageFailureAlertWithMessage:@"The image could not be saved to the temporary directory."];
+        return;
+    }
+    
+    // Try to add the image to the Photos library.
+    NSURL *outputURL = [NSURL URLWithString:outputPath];
+    PHPhotoLibrary *photoLibrary = [PHPhotoLibrary sharedPhotoLibrary];
+    [photoLibrary performChanges:^{[PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:outputURL];}  completionHandler:^(BOOL success, NSError *error){
+        if (success) {
+            // Show an alert describing the success, with sharing options
+            [self showSaveImageSuccessAlertWithImage:image];
+        } else {
+            // Show an alert describing the failure.
+            [self showSaveImageFailureAlertWithMessage:error.localizedDescription];
+        }
+    }];
+}
+
+-(void)showSaveImageFailureAlertWithMessage:(NSString *)message {
+    UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Failed to save image" message:message preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
+        [self stopBusyMode];
+    }];
+    [alert addAction:okAction];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+-(void)showSaveImageSuccessAlertWithImage:(UIImage *)image {
+    // Create a "Saved image" alert.
+    UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Saved image" message :@"The image has been added to your Photos library." preferredStyle:UIAlertControllerStyleAlert];
+    
+    
+    UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
+        [self stopBusyMode];
+    }];
+    [alert addAction:okAction];
+
+    // Show the alert.
+    [self presentViewController:alert animated:YES completion:nil];
+}
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
+
+
+
 
 
 @end

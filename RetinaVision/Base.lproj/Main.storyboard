@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="12120" systemVersion="16D32" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
-    <device id="retina4_7" orientation="portrait">
+    <device id="retina4_0" orientation="landscape">
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
@@ -18,60 +18,60 @@
                         <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
-                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <rect key="frame" x="0.0" y="0.0" width="568" height="320"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="home.png" translatesAutoresizingMaskIntoConstraints="NO" id="QUx-mG-Ape">
-                                <rect key="frame" x="-12.5" y="133.5" width="400" height="400"/>
+                            <imageView contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="home.png" translatesAutoresizingMaskIntoConstraints="NO" id="QUx-mG-Ape">
+                                <rect key="frame" x="0.0" y="0.0" width="568" height="320"/>
                                 <gestureRecognizers/>
                                 <connections>
                                     <outletCollection property="gestureRecognizers" destination="Vum-m5-XXt" appends="YES" id="T1a-e1-Yc5"/>
                                 </connections>
                             </imageView>
-                            <stackView opaque="NO" contentMode="scaleToFill" fixedFrame="YES" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="EKq-Sw-H2e">
-                                <rect key="frame" x="16" y="623" width="343" height="44"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <subviews>
-                                    <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="aEu-kK-2H7">
-                                        <rect key="frame" x="0.0" y="0.0" width="343" height="44"/>
-                                        <items>
-                                            <barButtonItem style="plain" id="Prc-2A-aQl">
-                                                <segmentedControl key="customView" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="bar" selectedSegmentIndex="0" id="aJ3-BO-e2I">
-                                                    <rect key="frame" x="16" y="7" width="121" height="30"/>
-                                                    <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                                    <segments>
-                                                        <segment title="Colour"/>
-                                                        <segment title="Gray"/>
-                                                    </segments>
-                                                    <connections>
-                                                        <action selector="onColorModeSelected:" destination="BYZ-38-t0r" eventType="valueChanged" id="RK5-7J-jHj"/>
-                                                    </connections>
-                                                </segmentedControl>
-                                            </barButtonItem>
-                                            <barButtonItem image="SwitchCamera.png" id="9a3-0c-PQy">
-                                                <connections>
-                                                    <action selector="onSwitchCameraButtonPressed" destination="BYZ-38-t0r" id="kjg-xc-seb"/>
-                                                </connections>
-                                            </barButtonItem>
-                                            <barButtonItem style="plain" systemItem="flexibleSpace" id="tkB-tg-1Rg"/>
-                                            <barButtonItem title="Save" id="b33-cz-cev">
-                                                <connections>
-                                                    <action selector="onSaveButtonPressed" destination="BYZ-38-t0r" id="fQA-lT-jof"/>
-                                                </connections>
-                                            </barButtonItem>
-                                        </items>
-                                    </toolbar>
-                                </subviews>
-                            </stackView>
-                            <activityIndicatorView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" style="gray" translatesAutoresizingMaskIntoConstraints="NO" id="NHO-Z7-EYJ">
-                                <rect key="frame" x="177.5" y="323.5" width="20" height="20"/>
+                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aEu-kK-2H7">
+                                <rect key="frame" x="0.0" y="276" width="568" height="44"/>
+                                <items>
+                                    <barButtonItem style="plain" id="Prc-2A-aQl">
+                                        <segmentedControl key="customView" opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="bar" selectedSegmentIndex="0" id="aJ3-BO-e2I">
+                                            <rect key="frame" x="20" y="7" width="121" height="30"/>
+                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                            <segments>
+                                                <segment title="Colour"/>
+                                                <segment title="Gray"/>
+                                            </segments>
+                                            <connections>
+                                                <action selector="onColorModeSelected:" destination="BYZ-38-t0r" eventType="valueChanged" id="RK5-7J-jHj"/>
+                                            </connections>
+                                        </segmentedControl>
+                                    </barButtonItem>
+                                    <barButtonItem image="SwitchCamera.png" id="9a3-0c-PQy">
+                                        <connections>
+                                            <action selector="onSwitchCameraButtonPressed" destination="BYZ-38-t0r" id="kjg-xc-seb"/>
+                                        </connections>
+                                    </barButtonItem>
+                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="tkB-tg-1Rg"/>
+                                    <barButtonItem title="Save" id="b33-cz-cev">
+                                        <connections>
+                                            <action selector="onSaveButtonPressed" destination="BYZ-38-t0r" id="fQA-lT-jof"/>
+                                        </connections>
+                                    </barButtonItem>
+                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="5Rn-PH-Ip9"/>
+                                </items>
+                            </toolbar>
+                            <activityIndicatorView hidden="YES" opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" hidesWhenStopped="YES" style="gray" translatesAutoresizingMaskIntoConstraints="NO" id="NHO-Z7-EYJ">
+                                <rect key="frame" x="274" y="150" width="20" height="20"/>
                             </activityIndicatorView>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
-                            <constraint firstItem="QUx-mG-Ape" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="245-HI-GT8"/>
-                            <constraint firstItem="QUx-mG-Ape" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="L2r-MP-Gqt"/>
+                            <constraint firstItem="QUx-mG-Ape" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" id="3pt-D9-ODA"/>
+                            <constraint firstItem="aEu-kK-2H7" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="4ER-9J-pv3"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="aEu-kK-2H7" secondAttribute="bottom" id="4b9-h0-ukW"/>
+                            <constraint firstItem="QUx-mG-Ape" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="PBE-j3-hcy"/>
+                            <constraint firstAttribute="trailing" secondItem="QUx-mG-Ape" secondAttribute="trailing" id="dCl-Dx-JsJ"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="QUx-mG-Ape" secondAttribute="bottom" id="kE0-Hi-UnH"/>
                             <constraint firstItem="NHO-Z7-EYJ" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="qC2-tD-7QB"/>
+                            <constraint firstAttribute="trailing" secondItem="aEu-kK-2H7" secondAttribute="trailing" id="tFt-FH-b0R"/>
                             <constraint firstItem="NHO-Z7-EYJ" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="x2W-7s-O7k"/>
                         </constraints>
                     </view>
@@ -88,7 +88,7 @@
                     </connections>
                 </tapGestureRecognizer>
             </objects>
-            <point key="canvasLocation" x="116" y="123.68815592203899"/>
+            <point key="canvasLocation" x="112.5" y="120.4225352112676"/>
         </scene>
     </scenes>
     <resources>
