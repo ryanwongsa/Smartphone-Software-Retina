@@ -32,6 +32,11 @@
 @property BOOL saveNextFrame;
 @property int viewMode;
 @property NSMutableArray* loc;
+@property NSMutableArray* coeff;
+@property NSMutableArray* L;
+@property NSMutableArray* R;
+
+
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -73,7 +78,7 @@
     // array of lines
     NSArray* allLinedStrings = [fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     
-    self.loc = [NSMutableArray arrayWithCapacity:1];
+    self.loc = [[NSMutableArray alloc]init];
     
     for (NSString *elements in allLinedStrings){
         NSArray* singleStrs = [elements componentsSeparatedByCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"#"]];
@@ -83,6 +88,32 @@
 //    NSLog(@"Test 1: %@",self.loc);
 // ====================================================================================
     // Reading coeff file
+    NSString* filePath2 = @"coeffFile";
+    NSString* fileRoot2 = [[NSBundle mainBundle] pathForResource:filePath2 ofType:@"txt"];
+    //
+    NSString* fileContents2 = [NSString stringWithContentsOfFile:fileRoot2 encoding:NSUTF8StringEncoding error:nil];
+    
+    // array of lines
+    NSArray* allLinedStrings2 = [fileContents2 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    
+    self.coeff = [[NSMutableArray alloc]init];
+    
+    NSMutableArray* temp = [[NSMutableArray alloc]init];
+    
+    for (NSString *elements in allLinedStrings2){
+        if([elements isEqualToString:@"$"]){
+            
+            NSMutableArray *temp2 = [temp mutableCopy];
+            [self.coeff addObject:temp2];
+            [temp removeAllObjects];
+        }
+        else{
+            NSArray* singleStrs = [elements componentsSeparatedByCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"#"]];
+            [temp addObject:singleStrs];
+        }
+    }
+    
+ //   NSLog(@"Test 2: %@",self.coeff);
     
     
 }
