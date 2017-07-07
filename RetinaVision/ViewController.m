@@ -31,6 +31,7 @@
 @property VideoCamera *videoCamera;
 @property BOOL saveNextFrame;
 @property int viewMode;
+@property NSMutableArray* loc;
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -61,6 +62,29 @@
     self.videoCamera.defaultAVCaptureSessionPreset  = AVCaptureSessionPresetHigh;
 //    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
+
+// ====================================================================================
+    //    Reading loc file
+    NSString* filePath = @"locFile";
+    NSString* fileRoot = [[NSBundle mainBundle] pathForResource:filePath ofType:@"txt"];
+    //
+    NSString* fileContents = [NSString stringWithContentsOfFile:fileRoot encoding:NSUTF8StringEncoding error:nil];
+    
+    // array of lines
+    NSArray* allLinedStrings = [fileContents componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    
+    self.loc = [NSMutableArray arrayWithCapacity:1];
+    
+    for (NSString *elements in allLinedStrings){
+        NSArray* singleStrs = [elements componentsSeparatedByCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"#"]];
+        [self.loc addObject:singleStrs];
+    }
+    [self.loc removeLastObject];
+//    NSLog(@"Test 1: %@",self.loc);
+// ====================================================================================
+    // Reading coeff file
+    
+    
 }
 
 -(void)viewDidLayoutSubviews{
