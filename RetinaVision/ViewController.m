@@ -22,6 +22,8 @@
     cv::Mat updatedStillMatRGBA;
     cv::Mat updatedVideoMatRetina;
     cv::Mat updatedVideoMatRGBA;
+    cv::Mat L;
+    cv::Mat R;
 }
 
 @property IBOutlet UIImageView *imageView;
@@ -33,8 +35,8 @@
 @property int viewMode;
 @property NSMutableArray* loc;
 @property NSMutableArray* coeff;
-@property NSMutableArray* L;
-@property NSMutableArray* R;
+//@property NSMutableArray* L;
+//@property NSMutableArray* R;
 
 
 
@@ -120,8 +122,8 @@
 }
 
 -(void)LRsplit{
-    self.L = [[NSMutableArray alloc]init];
-    self.R = [[NSMutableArray alloc]init];
+    NSMutableArray* left = [[NSMutableArray alloc]init];
+    NSMutableArray* right = [[NSMutableArray alloc]init];
     
     
     for(int i=0;i<[self.loc count];i++){
@@ -129,14 +131,29 @@
 //        [[self.loc objectAtIndex:0] replaceObjectAtIndex:2 withObject:strFromI];
         self.loc[i][2] = strFromI;
         if([self.loc[i][0] floatValue] < 0){
-            [self.L addObject:[self.loc[i] subarrayWithRange:NSMakeRange(0,3)]];
+            [left addObject:[self.loc[i] subarrayWithRange:NSMakeRange(0,3)]];
+            
         }
         else{
-            [self.R addObject:[self.loc[i] subarrayWithRange:NSMakeRange(0,3)]];
+            [right addObject:[self.loc[i] subarrayWithRange:NSMakeRange(0,3)]];
+            
         }
     }
-//    NSLog(@"Left: %@",self.L);
-//    NSLog(@"Right: %@",self.R);
+    L = cv::Mat([left count],3, CV_32F);
+    for(int i=0;i<[left count];i++){
+        for(int j=0;j<3;j++){
+            L.at<float>(i,j)=[left[i][j] floatValue];
+        }
+    }
+//    print(L);
+    
+    R = cv::Mat([right count],3, CV_32F);
+    for(int i=0;i<[right count];i++){
+        for(int j=0;j<3;j++){
+            R.at<float>(i,j)=[right[i][j] floatValue];
+        }
+    }
+    
 
 }
 
