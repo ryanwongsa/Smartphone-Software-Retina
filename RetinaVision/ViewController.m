@@ -51,6 +51,7 @@
 - (void)showSaveImageSuccessAlertWithImage:(UIImage *)image;
 - (void)startBusyMode;
 - (void)stopBusyMode;
+- (void)LRsplit;
 
 @end
 
@@ -114,8 +115,29 @@
     }
     
  //   NSLog(@"Test 2: %@",self.coeff);
+    [self LRsplit];
+    
+}
+
+-(void)LRsplit{
+    self.L = [[NSMutableArray alloc]init];
+    self.R = [[NSMutableArray alloc]init];
     
     
+    for(int i=0;i<[self.loc count];i++){
+        NSString *strFromI = [NSString stringWithFormat:@"%d",i];
+//        [[self.loc objectAtIndex:0] replaceObjectAtIndex:2 withObject:strFromI];
+        self.loc[i][2] = strFromI;
+        if([self.loc[i][0] floatValue] < 0){
+            [self.L addObject:[self.loc[i] subarrayWithRange:NSMakeRange(0,3)]];
+        }
+        else{
+            [self.R addObject:[self.loc[i] subarrayWithRange:NSMakeRange(0,3)]];
+        }
+    }
+//    NSLog(@"Left: %@",self.L);
+//    NSLog(@"Right: %@",self.R);
+
 }
 
 -(void)viewDidLayoutSubviews{
