@@ -24,6 +24,8 @@
     cv::Mat updatedVideoMatRGBA;
     cv::Mat L;
     cv::Mat R;
+    cv::Mat L_loc;
+    cv::Mat R_loc;
 }
 
 @property IBOutlet UIImageView *imageView;
@@ -54,6 +56,8 @@
 - (void)startBusyMode;
 - (void)stopBusyMode;
 - (void)LRsplit;
+- (void)cort_map:(int)alpha;
+- (double)cdist:(cv::Mat &)mat;
 
 @end
 
@@ -119,6 +123,8 @@
  //   NSLog(@"Test 2: %@",self.coeff);
     [self LRsplit];
     
+    [self cort_map:15];
+    
 }
 
 -(void)LRsplit{
@@ -154,7 +160,111 @@
         }
     }
     
+}
 
+
+
+-(void)cort_map:(int)alpha{
+    NSLog(@"Alpha value is: %d",alpha);
+    
+    // Calculating L_r
+    cv::Mat L_r;
+    cv::Mat L0 = L.col(0)-alpha;
+    cv::pow(L0, 2, L0);
+    cv::Mat L1;
+    L.col(1).copyTo(L1);
+    cv::pow(L1, 2, L1);
+    cv::add(L0,L1,L_r);
+    cv::sqrt(L_r, L_r);
+    
+    
+    // Calculating R_r
+    cv::Mat R_r;
+    cv::Mat R0 = R.col(0)+alpha;
+    cv::pow(R0, 2, R0);
+    cv::Mat R1;
+    R.col(1).copyTo(R1);
+    cv::pow(R1, 2, R1);
+    cv::add(R0,R1,R_r);
+    cv::sqrt(R_r, R_r);
+//    print(R_r);
+    
+    //  Calculating L_theta
+    cv::Mat L_theta;
+
+    cv::phase(L.col(0)-alpha, L.col(1), L_theta);
+    L_theta = L_theta - M_PI;
+//    print(L_theta);
+
+    //  Calculating R_theta
+    cv::Mat R_theta;
+    
+    cv::phase(R.col(0)+alpha, R.col(1), R_theta);
+    
+    for(int i =0;i<R_theta.rows;i++){
+        while(R_theta.at<float>(i) > M_PI/2){
+            R_theta.at<float>(i)=R_theta.at<float>(i)-M_PI;
+        }
+    }
+    cv::hconcat(L_theta, L_r, L_loc);
+    cv::hconcat(R_theta, R_r, R_loc);
+    
+//    print(L_loc);
+    
+    // Calculating x (theta)
+    cv::Mat L_theta2;
+    L_loc.copyTo(L_theta2);
+    cv::Mat R_theta2;
+    R_loc.copyTo(R_theta2);
+    
+    L_theta2.col(1)=0;
+    R_theta2.col(1)=0;
+    
+    
+    double L_theta_mean = [self cdist:L_theta2];
+    NSLog(@"Left Mean: %f",L_theta_mean);
+    
+    
+    double R_theta_mean = [self cdist:R_theta2];
+    NSLog(@"Right Mean: %f",R_theta_mean);
+    
+    double xd = (L_theta_mean+R_theta_mean)/2;
+    
+    // Calculating y (r)
+    cv::Mat L_r2;
+    L_loc.copyTo(L_r2);
+    cv::Mat R_r2;
+    R_loc.copyTo(R_r2);
+    
+    L_r2.col(0)=0;
+    R_r2.col(0)=0;
+    
+    double L_r_mean = [self cdist:L_r2];
+    NSLog(@"Left Mean: %f",L_r_mean);
+
+    double R_r_mean = [self cdist:R_r2];
+    NSLog(@"Right Mean: %f",R_r_mean);
+    
+    double yd = (L_r_mean+R_r_mean)/2;
+    
+    // Scale theta (x)
+    L_loc.col(0)*= yd/xd;
+    R_loc.col(0)*= yd/xd;
+    
+//    print(R_loc);
+    
+}
+
+-(double)cdist:(cv::Mat &)mat{
+    double sum=0;
+    for(int i=0;i<mat.rows;i++){
+        for(int j=0;j<mat.rows;j++){
+            double result = cv::norm(mat.row(i), mat.row(j));
+            sum+=result;
+        }
+    }
+    double mean = sum / (mat.rows*mat.rows);
+    return mean;
 }
 
 -(void)viewDidLayoutSubviews{
