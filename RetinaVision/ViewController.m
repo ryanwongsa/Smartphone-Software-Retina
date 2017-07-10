@@ -26,6 +26,7 @@
     cv::Mat R;
     cv::Mat L_loc;
     cv::Mat R_loc;
+    cv::Mat G[10][10];
 }
 
 @property IBOutlet UIImageView *imageView;
@@ -37,9 +38,9 @@
 @property int viewMode;
 @property NSMutableArray* loc;
 @property NSMutableArray* coeff;
+@property NSMutableArray* cort_size;
 //@property NSMutableArray* L;
 //@property NSMutableArray* R;
-
 
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
@@ -58,6 +59,9 @@
 - (void)LRsplit;
 - (void)cort_map:(int)alpha;
 - (double)cdist:(cv::Mat &)mat;
+- (void)prep;
+- (void)cort_prepare:(double)shrink k_width:(int)k_width sigma:(double)sigma;
+- (void)gauss100:(int)width sigma:(double)sigma;
 
 @end
 
@@ -120,11 +124,15 @@
         }
     }
     
- //   NSLog(@"Test 2: %@",self.coeff);
+    
+    [self prep];
+    
+}
+
+-(void)prep{
     [self LRsplit];
-    
     [self cort_map:15];
-    
+    [self cort_prepare:0.5 k_width:7 sigma:0.8];
 }
 
 -(void)LRsplit{
@@ -145,7 +153,7 @@
             
         }
     }
-    L = cv::Mat([left count],3, CV_32F);
+    L = cv::Mat([left count],3, CV_64F);
     for(int i=0;i<[left count];i++){
         for(int j=0;j<3;j++){
             L.at<float>(i,j)=[left[i][j] floatValue];
@@ -153,7 +161,7 @@
     }
 //    print(L);
     
-    R = cv::Mat([right count],3, CV_32F);
+    R = cv::Mat([right count],3, CV_64F);
     for(int i=0;i<[right count];i++){
         for(int j=0;j<3;j++){
             R.at<float>(i,j)=[right[i][j] floatValue];
@@ -161,7 +169,6 @@
     }
     
 }
-
 
 
 -(void)cort_map:(int)alpha{
@@ -265,6 +272,84 @@
     }
     double mean = sum / (mat.rows*mat.rows);
     return mean;
+}
+
+
+-(void)cort_prepare:(double)shrink k_width:(int)k_width sigma:(double)sigma{
+    [self gauss100:k_width sigma:sigma];
+    
+    // bring min(x) to 0
+    double L_locMin_0;
+    cv::minMaxLoc(L_loc.col(0),  &L_locMin_0);
+    
+
+    L_loc.col(0) -=L_locMin_0;
+    
+    double R_locMin_0;
+    cv::minMaxLoc(R_loc.col(0),  &R_locMin_0);
+    R_loc.col(0) -= R_locMin_0;
+    
+    
+    // flip y and bring min(y) to 0
+    L_loc.col(1) = -L_loc.col(1);
+    R_loc.col(1) = -R_loc.col(1);
+    
+    double L_locMin_1;
+    cv::minMaxLoc(L_loc.col(1),  &L_locMin_1);
+    L_loc.col(1) -= L_locMin_1;
+    double R_locMin_1;
+    cv::minMaxLoc(R_loc.col(1),  &R_locMin_1);
+    R_loc.col(1) -= R_locMin_1;
+
+    
+    // k_width more pixels of space from all sides for kernels to fit
+    L_loc += k_width;
+    R_loc += k_width;
+    
+    double L_locMax_0;
+    cv::minMaxLoc(L_loc.col(0),  NULL, &L_locMax_0);
+    double L_locMax_1;
+    cv::minMaxLoc(L_loc.col(1),  NULL, &L_locMax_1);
+    double cort_y = L_locMax_1 + k_width;
+    double cort_x = L_locMax_0 + k_width;
+    
+    // shrinking
+    self.cort_size = [[NSMutableArray alloc]init];
+    int y_shrinked = (int) (cort_y*shrink);
+    [self.cort_size addObject:[NSNumber numberWithInt:y_shrinked]];
+    int x_shrinked = (int) (cort_x*shrink);
+    [self.cort_size addObject:[NSNumber numberWithInt:x_shrinked]];
+    
+    L_loc*=shrink;
+    R_loc*=shrink;
+    
+    NSLog(@"Cort size: %@",self.cort_size);
+    
+}
+
+-(void)gauss100:(int)width sigma:(double)sigma{
+ 
+    for(int i=0;i<10;i++){
+        for(int j=0;j<10;j++){
+            G[i][j]= cv::Mat(width,width, CV_64F,0.0);
+
+            double dx = width/2 + i*0.1;
+            double dy = width/2 + j*0.1;
+            
+            for(int x=0;x<width;x++){
+                for(int y=0;y<width;y++){
+                    cv::Mat xy = cv::Mat(1,2, CV_64F);
+                    xy.at<float>(0,0)=dx-x;
+                    xy.at<float>(0,1)=dy-y;
+                    
+                    double d = cv::norm(xy);
+                    G[i][j].at<float>(y,x)= exp(-pow(d,2)/(2*pow(sigma,2)))/sqrt(2*M_PI*pow(sigma,2));
+//                    NSLog(@"%f",G[i][j].at<float>(y,x));
+                }
+            }
+        }
+    }
+    
 }
 
 -(void)viewDidLayoutSubviews{
