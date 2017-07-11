@@ -27,6 +27,7 @@
     cv::Mat L_loc;
     cv::Mat R_loc;
     cv::Mat G[10][10];
+    cv::Mat GI;
 }
 
 @property IBOutlet UIImageView *imageView;
@@ -39,6 +40,7 @@
 @property NSMutableArray* loc;
 @property NSMutableArray* coeff;
 @property NSMutableArray* cort_size;
+@property BOOL rotated;
 //@property NSMutableArray* L;
 //@property NSMutableArray* R;
 
@@ -62,6 +64,7 @@
 - (void)prep;
 - (void)cort_prepare:(double)shrink k_width:(int)k_width sigma:(double)sigma;
 - (void)gauss100:(int)width sigma:(double)sigma;
+- (void)gauss_norm_img:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
 
 @end
 
@@ -133,6 +136,7 @@
     [self LRsplit];
     [self cort_map:15];
     [self cort_prepare:0.5 k_width:7 sigma:0.8];
+    self.rotated=true;
 }
 
 -(void)LRsplit{
@@ -153,7 +157,7 @@
             
         }
     }
-    L = cv::Mat([left count],3, CV_64F);
+    L = cv::Mat((int)[left count],3, CV_32F);
     for(int i=0;i<[left count];i++){
         for(int j=0;j<3;j++){
             L.at<float>(i,j)=[left[i][j] floatValue];
@@ -161,7 +165,7 @@
     }
 //    print(L);
     
-    R = cv::Mat([right count],3, CV_64F);
+    R = cv::Mat((int)[right count],3, CV_32F);
     for(int i=0;i<[right count];i++){
         for(int j=0;j<3;j++){
             R.at<float>(i,j)=[right[i][j] floatValue];
@@ -184,6 +188,7 @@
     cv::add(L0,L1,L_r);
     cv::sqrt(L_r, L_r);
     
+    NSLog(@"%@",@"Here comes the wait 1");
     
     // Calculating R_r
     cv::Mat R_r;
@@ -195,6 +200,8 @@
     cv::add(R0,R1,R_r);
     cv::sqrt(R_r, R_r);
 //    print(R_r);
+    
+    NSLog(@"%@",@"Here comes the wait 2");
     
     //  Calculating L_theta
     cv::Mat L_theta;
@@ -208,14 +215,23 @@
     
     cv::phase(R.col(0)+alpha, R.col(1), R_theta);
     
+    NSLog(@"%@",@"Here comes the wait 3");
+    
     for(int i =0;i<R_theta.rows;i++){
         while(R_theta.at<float>(i) > M_PI/2){
             R_theta.at<float>(i)=R_theta.at<float>(i)-M_PI;
+//        float value = R_theta.at<float>(i);
+//        float modvalue = fmod(value,M_PI/2);
+//        R_theta.at<float>(i)=modvalue-M_PI;
         }
     }
+    
+    NSLog(@"%@",@"Here comes the wait 4");
+    
     cv::hconcat(L_theta, L_r, L_loc);
     cv::hconcat(R_theta, R_r, R_loc);
     
+    NSLog(@"%@",@"Here comes the wait 5");
 //    print(L_loc);
     
     // Calculating x (theta)
@@ -227,6 +243,7 @@
     L_theta2.col(1)=0;
     R_theta2.col(1)=0;
     
+    NSLog(@"%@",@"Here comes the wait 6");
     
     double L_theta_mean = [self cdist:L_theta2];
     NSLog(@"Left Mean: %f",L_theta_mean);
@@ -264,13 +281,14 @@
 
 -(double)cdist:(cv::Mat &)mat{
     double sum=0;
+    double result = 0;
     for(int i=0;i<mat.rows;i++){
-        for(int j=0;j<mat.rows;j++){
-            double result = cv::norm(mat.row(i), mat.row(j));
-            sum+=result;
+        for(int j=i+1;j<mat.rows;j++){
+                result = cv::norm(mat.row(i), mat.row(j));
+                sum+=result;
         }
     }
-    double mean = sum / (mat.rows*mat.rows);
+    double mean = (sum*2) / (mat.rows*mat.rows);
     return mean;
 }
 
@@ -358,15 +376,19 @@
     switch ([UIDevice currentDevice].orientation){
         case UIDeviceOrientationPortraitUpsideDown:
             self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            self.rotated=true;
             break;
         case UIDeviceOrientationLandscapeLeft:
             self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+            self.rotated=true;
             break;
         case UIDeviceOrientationLandscapeRight:
             self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            self.rotated=true;
             break;
         default:
             self.videoCamera.defaultAVCaptureVideoOrientation = AVCaptureVideoOrientationPortrait;
+            self.rotated=true;
             break;
     }
     
@@ -424,18 +446,68 @@
         // Restart the video.
         [self.videoCamera stop];
         [self.videoCamera start];
+        
     }
     else{
         // Refresh the still image.
         UIImage *image;
         //cv::cvtColor(originalStillMat, updatedStillMatRetina, cv::COLOR_RGBA2GRAY);
         originalStillMat.copyTo(updatedStillMatRetina);
+        int shape0 = updatedStillMatRetina.rows;
+        int shape1 = updatedStillMatRetina.cols;
+
+        NSLog(@"0:%d 1:%d",shape0,shape1);
+        
+        
         // processimage to update it.
         [self processImage:updatedStillMatRetina];
         image = MatToUIImage(updatedStillMatRetina);
         
         self.imageView.image = image;
     }
+}
+
+
+-(void)gauss_norm_img:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1{
+//    shape0=720;
+//    shape1=1280;
+//    x =1280/2;
+//    y =720/2;
+    
+    GI = cv::Mat(shape0,shape1, CV_32F,0.0);
+    //    print(GI);
+    
+    int s = (int)[self.loc count];
+    
+    for(int i=s-1;i>=0;i--){
+        float valuei6 = [self.loc[i][6] floatValue];
+        float valueXi0 = [self.loc[i][0] floatValue]+x;
+        float valueYi1 = [self.loc[i][1] floatValue]+y;
+        
+        int y1 = valueYi1-valuei6/2+0.5;
+        int y2 = valueYi1+valuei6/2+0.5;
+        int x1 = valueXi0-valuei6/2+0.5;
+        int x2 = valueXi0+valuei6/2+0.5;
+        //        NSLog(@"%d %d %d %d",y1,x1,y2-y1,x2-x1);
+        //        NSLog(@"%d %d",GI.rows,GI.cols);
+        
+        cv::Mat imageRegion;
+        imageRegion = GI(cv::Rect(x1,y1,x2-x1,y2-y1));
+        
+        int coeffX=0;
+        for(int x=x1;x<x2;x++){
+            int coeffY=0;
+            for(int y=y1;y<y2;y++){
+                //                NSLog(@"%@",self.coeff[i][coeffY][coeffX]);
+                GI.at<float>(y,x)+=[self.coeff[i][coeffY][coeffX] floatValue];
+                coeffY++;
+            }
+            coeffX++;
+        }
+    }
+    NSLog(@"%@",@"Completed Gaussian Normal");
+    //    print(GI);
+    
 }
 
 -(void)processImage:(cv::Mat &)mat {
@@ -450,6 +522,21 @@
             default:
                 break;
         }
+
+    }
+
+    // Implementing inverse gaussian normal of image
+    if(self.rotated){
+        int shape0 = mat.rows;
+        int shape1 = mat.cols;
+        
+        int x = (int) shape1/2;
+        int y = (int) shape0/2;
+        
+        [self gauss_norm_img:x y:y shape0:shape0 shape1:shape1];
+        
+        self.rotated=false;
+        
     }
     
     [self processImageHelper:mat];
@@ -473,9 +560,17 @@
     }
 }
 
+
 -(void)processImageHelper:(cv::Mat &)mat{
     if (self.viewMode == 1){
+        int shape0 = mat.rows;
+        int shape1 = mat.cols;
+        
+        int x = (int) shape1/2;
+        int y = (int) shape0/2;
+        
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
+        
     } else {
         
     }
