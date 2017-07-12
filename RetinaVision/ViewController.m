@@ -65,6 +65,7 @@
 - (void)cort_prepare:(double)shrink k_width:(int)k_width sigma:(double)sigma;
 - (void)gauss100:(int)width sigma:(double)sigma;
 - (void)gauss_norm_img:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
+- (cv::Mat)retina_sample:(int)x y:(int)y mat:(cv::Mat &)mat;
 
 @end
 
@@ -456,7 +457,7 @@
         int shape0 = updatedStillMatRetina.rows;
         int shape1 = updatedStillMatRetina.cols;
 
-        NSLog(@"0:%d 1:%d",shape0,shape1);
+//        NSLog(@"0:%d 1:%d",shape0,shape1);
         
         
         // processimage to update it.
@@ -493,6 +494,7 @@
         
         cv::Mat imageRegion;
         imageRegion = GI(cv::Rect(x1,y1,x2-x1,y2-y1));
+//        print(imageRegion);
         
         int coeffX=0;
         for(int x=x1;x<x2;x++){
@@ -571,9 +573,47 @@
         
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
         
+        cv::Mat V = [self retina_sample:x y:y mat:mat];
+//        print(V);
+        NSLog(@"%@",@"Completed retina sampling");
     } else {
         
     }
+}
+
+-(cv::Mat)retina_sample:(int)x y:(int)y mat:(cv::Mat &)mat{
+    cv::Mat copyMat;
+    mat.copyTo(copyMat);
+    
+    int s = (int)[self.loc count];
+    
+    cv::Mat V = cv::Mat(1,s, CV_32F,0.0);
+    
+    for(int i=0;i<s;i++){
+        float valuei6 = [self.loc[i][6] floatValue];
+        float valueXi0 = [self.loc[i][0] floatValue]+x;
+        float valueYi1 = [self.loc[i][1] floatValue]+y;
+        
+        int y1 = valueYi1-valuei6/2+0.5;
+        int y2 = valueYi1+valuei6/2+0.5;
+        int x1 = valueXi0-valuei6/2+0.5;
+        int x2 = valueXi0+valuei6/2+0.5;
+
+        int coeffX=0;
+        float sum=0;
+        for(int x=x1;x<x2;x++){
+            int coeffY=0;
+            for(int y=y1;y<y2;y++){
+                sum+=( copyMat.at<unsigned char>(y,x) *  [self.coeff[i][coeffY][coeffX] floatValue] );
+                coeffY++;
+            }
+            coeffX++;
+        }
+        V.at<float>(0,i)=sum;
+        
+    }
+    
+    return V;
 }
 
 -(void)startBusyMode{
