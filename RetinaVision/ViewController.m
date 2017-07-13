@@ -67,6 +67,7 @@
 - (void)gauss_norm_img:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
 - (cv::Mat)retina_sample:(int)x y:(int)y mat:(cv::Mat &)mat;
 - (cv::Mat)cort_img:(cv::Mat &)V k_width:(int)k_width sigma:(float)sigma;
+- (cv::Mat)inverse:(cv::Mat &)V x:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
 
 @end
 
@@ -178,7 +179,7 @@
 
 
 -(void)cort_map:(int)alpha{
-    NSLog(@"Alpha value is: %d",alpha);
+//    NSLog(@"Alpha value is: %d",alpha);
     
     // Calculating L_r
     cv::Mat L_r;
@@ -190,7 +191,7 @@
     cv::add(L0,L1,L_r);
     cv::sqrt(L_r, L_r);
     
-    NSLog(@"%@",@"Here comes the wait 1");
+    
     
     // Calculating R_r
     cv::Mat R_r;
@@ -203,7 +204,6 @@
     cv::sqrt(R_r, R_r);
 //    print(R_r);
     
-    NSLog(@"%@",@"Here comes the wait 2");
     
     //  Calculating L_theta
     cv::Mat L_theta;
@@ -217,7 +217,6 @@
     
     cv::phase(R.col(0)+alpha, R.col(1), R_theta);
     
-    NSLog(@"%@",@"Here comes the wait 3");
     
     for(int i =0;i<R_theta.rows;i++){
         while(R_theta.at<float>(i) > M_PI/2){
@@ -228,12 +227,10 @@
         }
     }
     
-    NSLog(@"%@",@"Here comes the wait 4");
     
     cv::hconcat(L_theta, L_r, L_loc);
     cv::hconcat(R_theta, R_r, R_loc);
     
-    NSLog(@"%@",@"Here comes the wait 5");
 //    print(L_loc);
     
     // Calculating x (theta)
@@ -245,14 +242,13 @@
     L_theta2.col(1)=0;
     R_theta2.col(1)=0;
     
-    NSLog(@"%@",@"Here comes the wait 6");
     
     double L_theta_mean = [self cdist:L_theta2];
-    NSLog(@"Left Mean: %f",L_theta_mean);
+//    NSLog(@"Left Mean: %f",L_theta_mean);
     
     
     double R_theta_mean = [self cdist:R_theta2];
-    NSLog(@"Right Mean: %f",R_theta_mean);
+//    NSLog(@"Right Mean: %f",R_theta_mean);
     
     double xd = (L_theta_mean+R_theta_mean)/2;
     
@@ -266,10 +262,10 @@
     R_r2.col(0)=0;
     
     double L_r_mean = [self cdist:L_r2];
-    NSLog(@"Left Mean: %f",L_r_mean);
+//    NSLog(@"Left Mean: %f",L_r_mean);
 
     double R_r_mean = [self cdist:R_r2];
-    NSLog(@"Right Mean: %f",R_r_mean);
+//    NSLog(@"Right Mean: %f",R_r_mean);
     
     double yd = (L_r_mean+R_r_mean)/2;
     
@@ -345,7 +341,7 @@
     L_loc*=shrink;
     R_loc*=shrink;
     
-    NSLog(@"Cort size: %@",self.cort_size);
+//    NSLog(@"Cort size: %@",self.cort_size);
     
 }
 
@@ -510,7 +506,7 @@
             coeffX++;
         }
     }
-    NSLog(@"%@",@"Completed Gaussian Normal");
+//    NSLog(@"%@",@"Completed Gaussian Normal");
     //    print(GI);
     
 }
@@ -556,6 +552,7 @@
         } else {
             // TODO: Change to processImageHelper
             cv::cvtColor(mat, updatedVideoMatRGBA, cv::COLOR_BGRA2RGBA);
+    
             
             image = MatToUIImage(updatedVideoMatRGBA);
         }
@@ -576,17 +573,61 @@
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
         
         cv::Mat V = [self retina_sample:x y:y mat:mat];
-        NSLog(@"%@",@"Completed retina sampling");
-
-        cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
-        cortImg.convertTo(cortImg,CV_8U);
-
-        NSLog(@"%d",mat.type());
-        NSLog(@"%d",cortImg.type());
-        mat = cortImg;
+//        NSLog(@"%@",@"Completed retina sampling");
+        
+        
+        // Inverse Image
+        cv::Mat inverse = [self inverse:V x:x y:y shape0:shape0 shape1:shape1];
+        inverse.convertTo(inverse,CV_8U);
+        mat = inverse;
+        
+        // creating cortical image
+//        cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
+//        cortImg.convertTo(cortImg,CV_8U);
+//        mat = cortImg;
+        
+        
     } else {
         
     }
+}
+
+-(cv::Mat)inverse:(cv::Mat &)V x:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1{
+    cv::Mat vTemp;
+    V.copyTo(vTemp);
+    cv::Mat I1 = cv::Mat(shape0,shape1,CV_32F,0.0);
+    cv::Mat I;
+    
+    int s = (int)[self.loc count];
+//    print(GI);
+    
+    for(int i=s-1;i>=0;i--){
+        float valuei6 = [self.loc[i][6] floatValue];
+        float valueXi0 = [self.loc[i][0] floatValue]+x;
+        float valueYi1 = [self.loc[i][1] floatValue]+y;
+        
+        int y1 = valueYi1-valuei6/2+0.5;
+        int y2 = valueYi1+valuei6/2+0.5;
+        int x1 = valueXi0-valuei6/2+0.5;
+        int x2 = valueXi0+valuei6/2+0.5;
+        
+        
+        
+        int coeffX=0;
+        for(int x=x1;x<x2;x++){
+            int coeffY=0;
+            for(int y=y1;y<y2;y++){
+                I1.at<float>(y,x)+= vTemp.at<float>(i) *[self.coeff[i][coeffY][coeffX] floatValue];
+                coeffY++;
+            }
+            coeffX++;
+        }
+//        NSLog(@"%d %d %d %d",I1.rows, I1.cols, GI.rows, GI.cols);
+        cv::divide(I1, GI, I);
+        
+    }
+    
+    return I;
 }
 
 -(cv::Mat)retina_sample:(int)x y:(int)y mat:(cv::Mat &)mat{
@@ -698,6 +739,7 @@
             int yp=y1;
             for(int gy=gy1;gy<gy2;gy++){
 //                NSLog(@"%f %f", G[dx][dy].at<float>(y,x),V.at<float>((int)p2));
+                // Maybe need to have with 0 included and p2
                 L_img.at<float>(yp,xp)+= G[dx][dy].at<float>(gy,gx)* V.at<float>((int)p2);
                 L_gimg.at<float>(yp,xp)+=G[dx][dy].at<float>(gy,gx);
                 yp++;
@@ -787,13 +829,13 @@
     cv::divide(R_img, R_gimg, right);
 //    print(right);
 
-    NSLog(@"%@",@"Completed cortical image");
+//    NSLog(@"%@",@"Completed cortical image");
     cv::rotate(left, left, 2);
     cv::rotate(right, right, 0);
     
     cv::hconcat(left,right, cortImg);
 //    print(cortImg);
-    NSLog(@"%d %d %d %d: %d, %d", left.rows, left.cols,right.rows, right.cols, cortImg.rows, cortImg.cols);
+//    NSLog(@"%d %d %d %d: %d, %d", left.rows, left.cols,right.rows, right.cols, cortImg.rows, cortImg.cols);
     
     return cortImg;
 }
