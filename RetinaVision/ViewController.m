@@ -409,8 +409,15 @@
         case 0:
             self.viewMode = 0;
             break;
-        default:
+        case 1:
             self.viewMode = 1;
+            break;
+        case 2:
+            self.viewMode = 2;
+            break;
+        default:
+//            NSLog(@"%d",segmentedControl.selectedSegmentIndex);
+            self.viewMode = 0;
             break;
     }
     [self refresh];
@@ -563,7 +570,9 @@
 
 
 -(void)processImageHelper:(cv::Mat &)mat{
-    if (self.viewMode == 1){
+    if (self.viewMode == 0){
+        
+    } else {
         int shape0 = mat.rows;
         int shape1 = mat.cols;
         
@@ -573,22 +582,20 @@
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
         
         cv::Mat V = [self retina_sample:x y:y mat:mat];
-//        NSLog(@"%@",@"Completed retina sampling");
         
-        
-        // Inverse Image
-        cv::Mat inverse = [self inverse:V x:x y:y shape0:shape0 shape1:shape1];
-        inverse.convertTo(inverse,CV_8U);
-        mat = inverse;
-        
-        // creating cortical image
-//        cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
-//        cortImg.convertTo(cortImg,CV_8U);
-//        mat = cortImg;
-        
-        
-    } else {
-        
+        if (self.viewMode == 1){
+            // creating cortical image
+            cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
+            cortImg.convertTo(cortImg,CV_8U);
+            mat = cortImg;
+        }
+        else{
+            // Inverse Image
+            cv::Mat inverse = [self inverse:V x:x y:y shape0:shape0 shape1:shape1];
+            inverse.convertTo(inverse,CV_8U);
+            mat = inverse;
+        }
+
     }
 }
 
