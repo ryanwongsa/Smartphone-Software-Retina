@@ -437,7 +437,7 @@
         // Hide the still image.
         self.imageView.image = nil;
 
-        self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
+        self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
         [self.videoCamera start];
     }
 }
@@ -576,9 +576,14 @@
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
         
         cv::Mat V = [self retina_sample:x y:y mat:mat];
-        cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
-//        print(V);
         NSLog(@"%@",@"Completed retina sampling");
+
+        cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
+        cortImg.convertTo(cortImg,CV_8U);
+
+        NSLog(@"%d",mat.type());
+        NSLog(@"%d",cortImg.type());
+        mat = cortImg;
     } else {
         
     }
@@ -629,13 +634,8 @@
     cv::Mat R_img  = cv::Mat(shape0,shape1, CV_32F, 0.0);
     cv::Mat L_gimg = cv::Mat(shape0,shape1, CV_32F, 0.0);
     cv::Mat R_gimg = cv::Mat(shape0,shape1, CV_32F, 0.0);
-//    
-//    for(int i=0;i<10;i++){
-//        for(int j=0;j<10;j++){
-//            print(G[i][j]);
-//        }
-//    }
-//    print(G);
+
+    
     // L
     for(int p=0;p<(int)(L_loc.rows);p++){
         float p0 =L_loc.at<float>(p,0);
@@ -661,8 +661,6 @@
         x2 = x + k_width/2 + 1;
         
         // coords into the 10x10 gaussian filters array (used floor instead)
-//        NSLog(@"%f %f %f %f", (roundf(p0*10)/10), roundf(p0), 10*((roundf(p0*10)/10) - floor(p0)), roundf(10*((roundf(p0*10)/10) - floor(p0)) ) );
-//        NSLog(@"%d", (int)(10*( (roundf(p0*10)/10) - roundf(p0) )) );
         
         int dx = (int)(roundf(10*((roundf(p0*10)/10) - floor(p0)) ));
         if(dx==10){
@@ -672,8 +670,6 @@
         if(dy==10){
             dy=0;
         }
-//        dx = int(10*(np.round(L_loc[p,0], decimals=1) - round(L_loc[p,0])))
-//        dy = int(10*(np.round(L_loc[p,1], decimals=1) - round(L_loc[p,1])))
         
         
         // in case of big kernels, clipping kernels at img edges
@@ -695,23 +691,109 @@
             gx2=k_width-(x2-shape1);
         }
 //        NSLog(@"%d %d %d %d",gy1,gy2,gx1,gx2);
-        NSLog(@"%d %d %d %d",gy1,gy2,gx1,gx2);
         
         
-//        int coeffX=0;
-        for(int x=gx1;x<gx2;x++){
-//            int coeffY=0;
-            for(int y=gy1;y<gy2;y++){
+        int xp=x1;
+        for(int gx=gx1;gx<gx2;gx++){
+            int yp=y1;
+            for(int gy=gy1;gy<gy2;gy++){
 //                NSLog(@"%f %f", G[dx][dy].at<float>(y,x),V.at<float>((int)p2));
-                L_img.at<float>(y,x)+= G[dx][dy].at<float>(y,x)* V.at<float>((int)p2);
-                L_gimg.at<float>(y,x)+=G[dx][dy].at<float>(y,x);
-//                coeffY++;
+                L_img.at<float>(yp,xp)+= G[dx][dy].at<float>(gy,gx)* V.at<float>((int)p2);
+                L_gimg.at<float>(yp,xp)+=G[dx][dy].at<float>(gy,gx);
+                yp++;
             }
-//            coeffX++;
+            xp++;
         }
 
     }
-//    print(L_img);
+//    print(L_gimg);
+    
+    cv::Mat left;// = cv::Mat(L_img.rows,L_img.cols,CV_8U);
+    cv::divide(L_img, L_gimg, left);
+//    print(left);
+    
+    
+    // R
+    for(int p=0;p<(int)(R_loc.rows);p++){
+        float p0 =R_loc.at<float>(p,0);
+        float p1 =R_loc.at<float>(p,1);
+        float p2 =R.at<float>(p,2);
+        int x = (int)(roundf(p0));
+        int y = (int)(roundf(p1));
+        
+        // coords of kernel in img array
+        int y1=0;
+        int y2=0;
+        int x1=0;
+        int x2=0;
+        
+        if ((y - k_width/2)>0){
+            y1 = y - k_width/2;
+        }
+        y2 = y + k_width/2 + 1;
+        
+        if ((x - k_width/2) > 0){
+            x1 = x - k_width/2;
+        }
+        x2 = x + k_width/2 + 1;
+        
+        // coords into the 10x10 gaussian filters array (used floor instead)
+        
+        int dx = (int)(roundf(10*((roundf(p0*10)/10) - floor(p0)) ));
+        if(dx==10){
+            dx=0;
+        }
+        int dy = (int)(roundf(10*((roundf(p1*10)/10) - floor(p1)) ));
+        if(dy==10){
+            dy=0;
+        }
+        
+        
+        // in case of big kernels, clipping kernels at img edges
+        int gy1=0;
+        int gy2=k_width;
+        int gx1=0;
+        int gx2=k_width;
+        
+        if ((y - k_width/2) < 0){
+            gy1 = -(y - k_width/2);
+        }
+        if (y2 > shape0){
+            gy2 = k_width-(y2-shape0);
+        }
+        if ((x - k_width/2) < 0){
+            gx1=-(x - k_width/2);
+        }
+        if (x2 > shape1){
+            gx2=k_width-(x2-shape1);
+        }
+        //        NSLog(@"%d %d %d %d",gy1,gy2,gx1,gx2);
+        
+        
+        int xp=x1;
+        for(int gx=gx1;gx<gx2;gx++){
+            int yp=y1;
+            for(int gy=gy1;gy<gy2;gy++){
+                R_img.at<float>(yp,xp)+= G[dx][dy].at<float>(gy,gx)* V.at<float>((int)p2);
+                R_gimg.at<float>(yp,xp)+=G[dx][dy].at<float>(gy,gx);
+                yp++;
+            }
+            xp++;
+        }
+        
+    }
+    
+    cv::Mat right;// = cv::Mat(L_img.rows,L_img.cols,CV_8U);
+    cv::divide(R_img, R_gimg, right);
+//    print(right);
+
+    NSLog(@"%@",@"Completed cortical image");
+    cv::rotate(left, left, 2);
+    cv::rotate(right, right, 0);
+    
+    cv::hconcat(left,right, cortImg);
+//    print(cortImg);
+    NSLog(@"%d %d %d %d: %d, %d", left.rows, left.cols,right.rows, right.cols, cortImg.rows, cortImg.cols);
     
     return cortImg;
 }
