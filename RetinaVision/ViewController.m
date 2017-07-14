@@ -41,6 +41,7 @@
 @property NSMutableArray* coeff;
 @property NSMutableArray* cort_size;
 @property BOOL rotated;
+@property BOOL alreadyLoaded;
 //@property NSMutableArray* L;
 //@property NSMutableArray* R;
 
@@ -84,8 +85,15 @@
     self.videoCamera.defaultAVCaptureSessionPreset  = AVCaptureSessionPresetHigh;
 //    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
+    self.alreadyLoaded=false;
+    
+}
 
-// ====================================================================================
+-(void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    if(!self.alreadyLoaded){
+    [self startBusyMode];
+    // ====================================================================================
     //    Reading loc file
     NSString* filePath = @"locFile";
     NSString* fileRoot = [[NSBundle mainBundle] pathForResource:filePath ofType:@"txt"];
@@ -102,8 +110,8 @@
         [self.loc addObject:singleStrs];
     }
     [self.loc removeLastObject];
-//    NSLog(@"Test 1: %@",self.loc);
-// ====================================================================================
+    //    NSLog(@"Test 1: %@",self.loc);
+    // ====================================================================================
     // Reading coeff file
     NSString* filePath2 = @"coeffFile";
     NSString* fileRoot2 = [[NSBundle mainBundle] pathForResource:filePath2 ofType:@"txt"];
@@ -132,6 +140,9 @@
     
     
     [self prep];
+    [self stopBusyMode];
+        self.alreadyLoaded=true;
+    }
     
 }
 
@@ -633,6 +644,9 @@
         cv::divide(I1, GI, I);
         
     }
+    
+    
+    
     
     return I;
 }
