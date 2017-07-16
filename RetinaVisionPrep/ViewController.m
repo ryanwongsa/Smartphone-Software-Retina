@@ -77,6 +77,7 @@
 //    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
     
+    
     // ====================================================================================
     //    Reading loc file
     NSString* filePath = @"locFile";
@@ -390,7 +391,34 @@
         // Hide the still image.
         self.imageView.image = nil;
 
-        self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
+        self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionBack;
+        
+        NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+        for (AVCaptureDevice *device in devices)
+        {
+            if ([device position] == AVCaptureDevicePositionBack) {
+                if ([device lockForConfiguration:nil]) {
+                    device.autoFocusRangeRestriction = AVCaptureAutoFocusRangeRestrictionNone;
+                    [device unlockForConfiguration];
+                }
+            }
+        }
+        
+        //        AVCaptureDevice *device = self.videoCamera.device;
+//        NSError *error = nil;
+//        if ([device lockForConfiguration:&error])
+//        {
+//            if ([device isFocusModeSupported:AVCaptureFocusModeLocked])
+//            {
+//                [device setFocusMode:AVCaptureFocusModeLocked];
+//            }
+//            [device unlockForConfiguration];
+//        }
+//        else
+//        {
+//            NSLog(@"%@", error);
+//        }
+        
         [self.videoCamera start];
     }
 }
@@ -488,42 +516,35 @@
 }
 
 -(cv::Mat)inverse:(cv::Mat &)V x:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1{
-//    cv::Mat vTemp;
-//    V.copyTo(vTemp);
-//    cv::Mat I1 = cv::Mat(shape0,shape1,CV_32F,0.0);
+    cv::Mat vTemp;
+    V.copyTo(vTemp);
+    cv::Mat I1 = cv::Mat(shape0,shape1,CV_32F,0.0);
     cv::Mat I;
     
-//    int s = (int)[self.loc count];
-////    print(GI);
-//    
-//    for(int i=s-1;i>=0;i--){
-//        float valuei6 = [self.loc[i][6] floatValue];
-//        float valueXi0 = [self.loc[i][0] floatValue]+x;
-//        float valueYi1 = [self.loc[i][1] floatValue]+y;
-//        
-//        int y1 = valueYi1-valuei6/2+0.5;
-//        int y2 = valueYi1+valuei6/2+0.5;
-//        int x1 = valueXi0-valuei6/2+0.5;
-//        int x2 = valueXi0+valuei6/2+0.5;
-//        
-//        
-//        
-//        int coeffX=0;
-//        for(int x=x1;x<x2;x++){
-//            int coeffY=0;
-//            for(int y=y1;y<y2;y++){
-//                I1.at<float>(y,x)+= vTemp.at<float>(i) *[self.coeff[i][coeffY][coeffX] floatValue];
-//                coeffY++;
-//            }
-//            coeffX++;
-//        }
-////        NSLog(@"%d %d %d %d",I1.rows, I1.cols, GI.rows, GI.cols);
-//        cv::divide(I1, GI, I);
-//        
-//    }
-//    
-//    
+    int s = loc.rows;
+    cv::Mat X = loc.col(0) + x;
+    cv::Mat Y = loc.col(1) + y;
     
+    for(int i=s-1;i>=0;i--){
+        float valuei6 = loc.at<float>(i,6);
+        float Yi = Y.at<float>(i);
+        float Xi = X.at<float>(i);
+        
+        int y1 = Yi-valuei6/2+0.5;
+        int y2 = Yi+valuei6/2+0.5;
+        int x1 = Xi-valuei6/2+0.5;
+        int x2 = Xi+valuei6/2+0.5;
+        
+        cv::Mat extractI1 = I1(cv::Rect(x1,y1,x2-x1,y2-y1));
+        
+        
+        
+        cv::add(extractI1,V.at<float>(i) * coeff[i],extractI1);
+        
+    }
+    cv::divide(I1, GI, I);
+    
+//    print(GI);
     
     return I;
 }
