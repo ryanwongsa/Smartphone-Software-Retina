@@ -12,6 +12,8 @@
 #import <opencv2/imgcodecs.hpp>
 #import <opencv2/imgcodecs/ios.h>
 #import <opencv2/imgproc.hpp>
+#import <opencv2/highgui/highgui.hpp>
+#import <opencv2/xfeatures2d.hpp>
 
 #import "ViewController.h"
 #import "VideoCamera.h"
@@ -516,18 +518,42 @@
         int shape0 = mat.rows;
         int shape1 = mat.cols;
         
-        int x = (int) shape1/4;
-        int y = (int) shape0/4;
+        
+        // Corner Detection Here
+        
+        int x = (int) shape1/2;
+        int y = (int) shape0/2;
+        
+        std::vector<cv::KeyPoint> keypoints;
+        cv::FAST(mat, keypoints, 20);
+        
+        NSLog(@"%lu",keypoints.size());
+        float avgX=0;
+        float avgY=0;
+        for(cv::KeyPoint kp : keypoints){
+//            NSLog(@"%f %f", kp.pt.x, kp.pt.y);
+            avgX+=kp.pt.x;
+            avgY+=kp.pt.y;
+            
+        }
+        
+        if(keypoints.size()!=0){
+            x=(int)avgX/keypoints.size();
+            y=(int)avgY/keypoints.size();
+        }
+        
+        
+        
+        
         
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
-        NSLog(@"%@",@"Reached here 0");
+        
         cv::Mat V = [self retina_sample:x y:y mat:mat];
-        NSLog(@"%@",@"Reached here 1");
+        
         if (self.viewMode == 1){
             // creating cortical image
-            NSLog(@"%@",@"Reached here 2");
+            
             cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
-            NSLog(@"%@",@"Reached here 3");
             cortImg.convertTo(cortImg,CV_8U);
             mat = cortImg;
         }
