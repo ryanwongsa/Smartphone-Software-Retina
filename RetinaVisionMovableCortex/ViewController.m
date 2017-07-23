@@ -65,6 +65,7 @@
 - (cv::Mat)cort_img:(cv::Mat &)V k_width:(int)k_width sigma:(float)sigma;
 - (cv::Mat)inverse:(cv::Mat &)V x:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
 - (void)gauss_norm_img:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
+- (void)create_new_focal_point:(cv::Mat &)cortImg mat:(cv::Mat &) mat;
 
 @end
 
@@ -309,24 +310,9 @@
     
     self.started=false;
     
-//    self.alreadyLoaded=false;
-    
     
 }
 
-//-(void)viewDidAppear:(BOOL)animated{
-//    [super viewDidAppear:animated];
-//    if(!self.alreadyLoaded){
-//        [self startBusyMode];
-//        
-//
-//        
-//        [self stopBusyMode];
-//        
-//        self.alreadyLoaded=true;
-//    }
-//    
-//}
 
 -(IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture{
     if (tapGesture.state == UIGestureRecognizerStateEnded){
@@ -347,6 +333,9 @@
             break;
         case 2:
             self.viewMode = 2;
+            break;
+        case 3:
+            self.viewMode = 3;
             break;
         default:
             self.viewMode = 0;
@@ -471,6 +460,144 @@
         
         cv::add(GI_roi,coeff_roi,GI_roi);
     }
+}
+
+-(void)create_new_focal_point:(cv::Mat &)cortImg mat:(cv::Mat &)mat{
+    std::vector<cv::KeyPoint> keypointsLeft;
+    cv::Mat cortLeft_roi = cortImg(cv::Rect(15,15,cortImg.cols/2-30,cortImg.rows-30));
+    
+    cv::FAST(cortLeft_roi, keypointsLeft, 20);
+    
+    std::vector<cv::KeyPoint> keypointsRight;
+    cv::Mat cortRight_roi = cortImg(cv::Rect(cortImg.cols/2+15,15,cortImg.cols/2-30,cortImg.rows-30));
+    
+    cv::FAST(cortRight_roi, keypointsRight, 20);
+    
+    //            NSLog(@"%lu",keypoints.size());
+    //            NSLog(@"%d %d", cortImg.cols, cortImg.rows);
+    int tempX=0;
+    int tempY=0;
+    float tempBest = 0;
+    int leftorright=-1;
+    
+    // For display purposes
+    //            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2BGR);
+    
+    //            for(int i=15;i<cortImg.cols/2-15;i++){
+    //                for(int j=15;j<cortImg.rows-15;j++){
+    //                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(j,i);
+    //                    keyVal[0]=255;
+    //                    keyVal[1]=0;
+    //                    keyVal[2]=0;
+    //                    cortImg.at<cv::Vec3b>(j,i) = keyVal;
+    //
+    //                }
+    //            }
+    //
+    //            for(int i=cortImg.cols/2+15;i<cortImg.cols-15;i++){
+    //                for(int j=15;j<cortImg.rows-15;j++){
+    //                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(j,i);
+    //                    keyVal[0]=255;
+    //                    keyVal[1]=0;
+    //                    keyVal[2]=0;
+    //                    cortImg.at<cv::Vec3b>(j,i) = keyVal;
+    //
+    //                }
+    //            }
+    
+    for(cv::KeyPoint kp : keypointsLeft){
+        float dx = (kp.pt.x-cortImg.cols/2);
+        float dy = (kp.pt.y-cortImg.rows/2);
+        float dist = sqrt(dx*dx+dy+dy)*kp.response;
+        
+        
+        if(tempBest<kp.response){
+            tempX=(int)kp.pt.x+15;
+            tempY=(int)kp.pt.y+15;
+            tempBest=kp.response;
+            leftorright=0;
+        }
+    }
+    
+    for(cv::KeyPoint kp : keypointsRight){
+        float dx = (kp.pt.x-cortImg.cols/2);
+        float dy = (kp.pt.y-cortImg.rows/2);
+        float dist = sqrt(dx*dx+dy+dy)*kp.response;
+        
+        if(tempBest<kp.response){
+            tempX=(int)kp.pt.x+15;
+            tempY=(int)kp.pt.y+15;
+            tempBest=kp.response;
+            leftorright=1;
+        }
+    }
+    
+    
+    if(leftorright==0){
+        // If Left
+        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(tempY,tempX);
+        keyVal[0]=0;
+        keyVal[1]=0;
+        keyVal[2]=255;
+        cortImg.at<cv::Vec3b>(tempY,tempX) = keyVal;
+        NSLog(@"Left %d %d", tempX,tempY);
+        for(int i=0;i<L_loc.rows;i++){
+            int xLocI_ceil =(int)ceilf(L_loc.at<float>(i,0));
+            int yLocI_ceil =(int)ceilf(L_loc.at<float>(i,1));
+            int xLocI_floor =(int)floorf(L_loc.at<float>(i,0));
+            int yLocI_floor =(int)floorf(L_loc.at<float>(i,1));
+            if(((xLocI_ceil==tempX)&&(yLocI_ceil==tempY))||((xLocI_ceil==tempX)&&(yLocI_floor==tempY))||((xLocI_floor==tempX)&&(yLocI_ceil==tempY))||((xLocI_floor==tempX)&&(yLocI_floor==tempY))){
+                NSLog(@"%@", @"They Match");
+                self.x+=L_loc.at<float>(i,2);
+                self.y+=L_loc.at<float>(i,3);
+                if((self.x<=50)||(self.x>=mat.cols-50)||(self.y>=mat.rows-50)||(self.y<=50)){
+                    NSLog(@"%@",@"RESET EDGE");
+                    int randX = (int) 50 + arc4random() % (mat.cols-50-50+1);
+                    int randY = (int) 50 + arc4random() % (mat.cols-50-50+1);
+                    self.x = randX;
+                    self.y = randY;
+                }
+                break;
+            }
+        }
+        
+    }
+    else if(leftorright==1){
+        // If Right
+        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(tempY,tempX+cortImg.cols/2);
+        keyVal[0]=0;
+        keyVal[1]=0;
+        keyVal[2]=255;
+        cortImg.at<cv::Vec3b>(tempY,tempX+cortImg.cols/2) = keyVal;
+        NSLog(@"Right %d %d", tempX,tempY);
+        for(int i=0;i<R_loc.rows;i++){
+            int xLocI_ceil =(int)ceilf(R_loc.at<float>(i,0));
+            int yLocI_ceil =(int)ceilf(R_loc.at<float>(i,1));
+            int xLocI_floor =(int)floorf(R_loc.at<float>(i,0));
+            int yLocI_floor =(int)floorf(R_loc.at<float>(i,1));
+            if(((xLocI_ceil==tempX)&&(yLocI_ceil==tempY))||((xLocI_ceil==tempX)&&(yLocI_floor==tempY))||((xLocI_floor==tempX)&&(yLocI_ceil==tempY))||((xLocI_floor==tempX)&&(yLocI_floor==tempY))){
+                NSLog(@"%@", @"They Match");
+                self.x+=R_loc.at<float>(i,2);
+                self.y+=R_loc.at<float>(i,3);
+                if((self.x<=50)||(self.x>=mat.cols-50)||(self.y>=mat.rows-50)||(self.y<=50)){
+                    NSLog(@"%@",@"RESET EDGE");
+                    int randX = (int) 50 + arc4random() % (mat.cols-50-50+1);
+                    int randY = (int) 50 + arc4random() % (mat.cols-50-50+1);
+                    self.x = randX;
+                    self.y = randY;
+                }
+                break;
+            }
+        }
+    }
+    else{
+        NSLog(@"%@",@"RESET");
+        int randX = (int) 50 + arc4random() % (mat.cols-50-50+1);
+        int randY = (int) 50 + arc4random() % (mat.cols-50-50+1);
+        self.x = randX;
+        self.y = randY;
+        
+    }
     
 }
 
@@ -533,240 +660,11 @@
         cv::Mat V = [self retina_sample:self.x y:self.y mat:mat];
         
         if (self.viewMode == 1){
-            // creating cortical image
-            int oldselfx = self.x;
-            int oldselfy = self.y;
-            
             cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
             cortImg.convertTo(cortImg,CV_8U);
-            
-            
-            std::vector<cv::KeyPoint> keypointsLeft;
-            cv::Mat cortLeft_roi = cortImg(cv::Rect(15,15,cortImg.cols/2-30,cortImg.rows-30));
-            
-            cv::FAST(cortLeft_roi, keypointsLeft, 20);
-            
-            std::vector<cv::KeyPoint> keypointsRight;
-            cv::Mat cortRight_roi = cortImg(cv::Rect(cortImg.cols/2+15,15,cortImg.cols/2-30,cortImg.rows-30));
-            
-            cv::FAST(cortRight_roi, keypointsRight, 20);
-            
-//            NSLog(@"%lu",keypoints.size());
-//            NSLog(@"%d %d", cortImg.cols, cortImg.rows);
-            int tempX=0;
-            int tempY=0;
-            float tempBest = 0;
-            int leftorright=-1;
-            
-            // For display purposes
-//            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2BGR);
-            
-//            for(int i=15;i<cortImg.cols/2-15;i++){
-//                for(int j=15;j<cortImg.rows-15;j++){
-//                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(j,i);
-//                    keyVal[0]=255;
-//                    keyVal[1]=0;
-//                    keyVal[2]=0;
-//                    cortImg.at<cv::Vec3b>(j,i) = keyVal;
-//
-//                }
-//            }
-//
-//            for(int i=cortImg.cols/2+15;i<cortImg.cols-15;i++){
-//                for(int j=15;j<cortImg.rows-15;j++){
-//                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(j,i);
-//                    keyVal[0]=255;
-//                    keyVal[1]=0;
-//                    keyVal[2]=0;
-//                    cortImg.at<cv::Vec3b>(j,i) = keyVal;
-//                    
-//                }
-//            }
-            
-            for(cv::KeyPoint kp : keypointsLeft){
-                float dx = (kp.pt.x-cortImg.cols/2);
-                float dy = (kp.pt.y-cortImg.rows/2);
-                float dist = sqrt(dx*dx+dy+dy)*kp.response;
-                
-                
-                if(tempBest<dist){
-                    tempX=(int)kp.pt.x+15;
-                    tempY=(int)kp.pt.y+15;
-                    tempBest=dist*kp.response;
-                    leftorright=0;
-                }
-            }
-            
-            for(cv::KeyPoint kp : keypointsRight){
-                float dx = (kp.pt.x-cortImg.cols/2);
-                float dy = (kp.pt.y-cortImg.rows/2);
-                float dist = sqrt(dx*dx+dy+dy)*kp.response;
-                
-                if(tempBest<dist){
-                    tempX=(int)kp.pt.x+15;
-                    tempY=(int)kp.pt.y+15;
-                    tempBest=dist*kp.response;
-                    leftorright=1;
-                }
-            }
-//            int count=0;
-//            for(cv::KeyPoint kp : keypointsLeft){
-//                if(tempBest==kp.response){
-//                    count++;
-//                }
-//            }
-//            for(cv::KeyPoint kp : keypointsRight){
-//                if(tempBest==kp.response){
-//                    count++;
-//                }
-//
-//            }
-            NSLog(@"best: %f", tempBest);
-            
-            if(leftorright==0){
-                // If Left
-                cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(tempY,tempX);
-                keyVal[0]=0;
-                keyVal[1]=0;
-                keyVal[2]=255;
-                cortImg.at<cv::Vec3b>(tempY,tempX) = keyVal;
-                NSLog(@"Left %d %d", tempX,tempY);
-                for(int i=0;i<L_loc.rows;i++){
-                    int xLocI_ceil =(int)ceilf(L_loc.at<float>(i,0));
-                    int yLocI_ceil =(int)ceilf(L_loc.at<float>(i,1));
-                    int xLocI_floor =(int)floorf(L_loc.at<float>(i,0));
-                    int yLocI_floor =(int)floorf(L_loc.at<float>(i,1));
-                    if(((xLocI_ceil==tempX)&&(yLocI_ceil==tempY))||((xLocI_ceil==tempX)&&(yLocI_floor==tempY))||((xLocI_floor==tempX)&&(yLocI_ceil==tempY))||((xLocI_floor==tempX)&&(yLocI_floor==tempY))){
-                        NSLog(@"%@", @"They Match");
-                        self.x+=L_loc.at<float>(i,2);
-                        self.y+=L_loc.at<float>(i,3);
-                        if((self.x<=0)||(self.x>=mat.cols)||(self.y>=mat.rows)||(self.y<=0)){
-                            NSLog(@"%@",@"RESET EDGE");
-                            int randX = (int) (mat.cols/5) + arc4random() % ((mat.cols/2+4*(mat.cols/5))-(mat.cols/5)+1);
-                            int randY = (int) (mat.rows/5) + arc4random() % ((mat.rows/2+4*(mat.rows/5))-(mat.rows/5)+1);
-                            self.x = randX;
-                            self.y = randY;
-                        }
-                        break;
-                    }
-                }
-            
-            }
-            else if(leftorright==1){
-                // If Right
-                cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(tempY,tempX+cortImg.cols/2);
-                keyVal[0]=0;
-                keyVal[1]=0;
-                keyVal[2]=255;
-                cortImg.at<cv::Vec3b>(tempY,tempX+cortImg.cols/2) = keyVal;
-                NSLog(@"Right %d %d", tempX,tempY);
-                for(int i=0;i<R_loc.rows;i++){
-                    int xLocI_ceil =(int)ceilf(R_loc.at<float>(i,0));
-                    int yLocI_ceil =(int)ceilf(R_loc.at<float>(i,1));
-                    int xLocI_floor =(int)floorf(R_loc.at<float>(i,0));
-                    int yLocI_floor =(int)floorf(R_loc.at<float>(i,1));
-                    if(((xLocI_ceil==tempX)&&(yLocI_ceil==tempY))||((xLocI_ceil==tempX)&&(yLocI_floor==tempY))||((xLocI_floor==tempX)&&(yLocI_ceil==tempY))||((xLocI_floor==tempX)&&(yLocI_floor==tempY))){
-                        NSLog(@"%@", @"They Match");
-                        self.x+=R_loc.at<float>(i,2);
-                        self.y+=R_loc.at<float>(i,3);
-                        if((self.x<=0)||(self.x>=mat.cols)||(self.y>=mat.rows)||(self.y>=mat.rows)){
-                            NSLog(@"%@",@"RESET EDGE");
-                            int randX = (int) (mat.cols/5) + arc4random() % ((mat.cols/2+4*(mat.cols/5))-(mat.cols/5)+1);
-                            int randY = (int) (mat.rows/5) + arc4random() % ((mat.rows/2+4*(mat.rows/5))-(mat.rows/5)+1);
-                            self.x = randX;
-                            self.y = randY;
-                        }
-                        break;
-                    }
-                }
-            }
-            else{
-                NSLog(@"%@",@"RESET");
-                int randX = (int) (mat.cols/5) + arc4random() % ((mat.cols/2+4*(mat.cols/5))-(mat.cols/5)+1);
-                int randY = (int) (mat.rows/5) + arc4random() % ((mat.rows/2+4*(mat.rows/5))-(mat.rows/5)+1);
-                self.x = randX;
-                self.y = randY;
-                
-            }
-//
-//            if(keypoints.size()!=0){
-//                
-////                NSLog(@"%f %f", tempX, tempY);
-////                self.x=(int)tempX;//avgX/keypoints.size();
-//            
-////                self.y=(int)tempY;//avgY/keypoints.size();
-////             y is cols, x is rows
-//                NSLog(@"%f %f", tempX, tempY);
-//                if(tempY>(cortImg.cols/2)){
-//                    NSLog(@"%@", @"right");
-//                    // need to minus something here
-//                    for(int i=0;i<R_loc.rows;i++)
-//                    {
-//                        int xR = (int)roundf(R_loc.at<float>(i,0));
-//                        int yR = (int)roundf(R_loc.at<float>(i,1));
-//                        
-//                        if((xR==(int)roundf(tempX)) && (yR==(int)roundf(tempY))){
-//                            self.x+=(int)R_loc.at<float>(i,2);
-//                            self.y+=(int)R_loc.at<float>(i,3);
-//                            NSLog(@"NEW PLACE RIGHT: %d %d", self.y, self.x);
-//                        }
-//                    }
-//                }
-//                else{
-//                    int closestX = 100;
-//                    int closestXValue =0;
-//                    int bestI=-1;
-//                    for(int i=0;i<L_loc.rows;i++)
-//                    {
-////                        NSLog(@"%@", @"left");
-//                        int xR = (int)roundf(L_loc.at<float>(i,0));
-//                        int yR = (int)roundf(L_loc.at<float>(i,1));
-//                        if( yR==(int)roundf(tempY)){
-//                            
-//                            if(abs(xR-(int)roundf(tempX))<closestX){
-//                                closestX=abs(xR-(int)roundf(tempX));
-//                                closestXValue = xR;
-//                                bestI=i;
-//                            }
-////                            NSLog(@"%d %d %d %d", closestXValue, yR, (int)roundf(tempX), (int)roundf(tempY));
-////                            NSLog(@"Shift %d %d",(int)L_loc.at<float>(i,2), (int)L_loc.at<float>(i,3));
-////                            self.x+=(int)L_loc.at<float>(i,2);
-////                            self.y+=(int)L_loc.at<float>(i,3);
-////                            NSLog(@"NEW PLACE LEFT: %d %d", self.y, self.x);
-//                        }
-//                    }
-//                    NSLog(@"%d %d %d %d", closestXValue, (int)roundf(tempY), (int)roundf(tempX), (int)roundf(tempY));
-//                    NSLog(@"Shift %d %d %d",bestI,(int)L_loc.at<float>(bestI,2), (int)L_loc.at<float>(bestI,3));
-//                    self.x+=(int)L_loc.at<float>(bestI,2);
-//                    self.y+=(int)L_loc.at<float>(bestI,3);
-//
-//
-//                }
-//            
-////                L_loc.col(2);
-////                L_loc.col(3);
-//            }
-            
-//            mat = cortImg;
-            
-            [self gauss_norm_img:oldselfx y:oldselfy shape0:originalStillMat.rows shape1:originalStillMat.cols ];
-            
-            cv::Mat inverse = [self inverse:V x:oldselfx y:oldselfy shape0:shape0 shape1:shape1];
-            
-            
-            
-            inverse.convertTo(inverse,CV_8U);
-//            mat = inverse;
-            
-            cv::Mat cortImgPadded;
-            cv::copyMakeBorder(cortImg, cortImgPadded, (inverse.rows-cortImg.rows)/2+1, (inverse.rows-cortImg.rows)/2, 0, 0, cv::BORDER_CONSTANT,cv::Scalar(0));
-            cv::Mat cortImgPaddedTemp;
-            cortImgPadded.convertTo(cortImgPaddedTemp, CV_8U);
-            NSLog(@"%d %d %d %d %d %d", cortImgPaddedTemp.rows, cortImgPaddedTemp.cols, inverse.rows, inverse.cols, cortImgPaddedTemp.type(), inverse.type());
-            cv::hconcat(inverse, cortImgPaddedTemp, mat);
-            
+            mat = cortImg;
         }
-        else{
+        else if(self.viewMode==2){
             // Inverse Image
             [self gauss_norm_img:self.x y:self.y shape0:originalStillMat.rows shape1:originalStillMat.cols ];
             cv::Mat inverse = [self inverse:V x:self.x y:self.y shape0:shape0 shape1:shape1];
@@ -775,6 +673,28 @@
             
             inverse.convertTo(inverse,CV_8U);
             mat = inverse;
+        }
+        else if(self.viewMode==3){
+            // creating cortical image
+            int oldselfx = self.x;
+            int oldselfy = self.y;
+            
+            cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
+            cortImg.convertTo(cortImg,CV_8U);
+            
+            [self create_new_focal_point:cortImg mat:mat];
+            
+            [self gauss_norm_img:oldselfx y:oldselfy shape0:originalStillMat.rows shape1:originalStillMat.cols ];
+            cv::Mat inverse = [self inverse:V x:oldselfx y:oldselfy shape0:shape0 shape1:shape1];
+            inverse.convertTo(inverse,CV_8U);
+            
+            // can convert to rgb inverse here
+            
+            cv::Mat cortImgPadded;
+            cv::copyMakeBorder(cortImg, cortImgPadded, (inverse.rows-cortImg.rows)/2+1, (inverse.rows-cortImg.rows)/2, 0, 0, cv::BORDER_CONSTANT,cv::Scalar(0));
+        
+            
+            cv::hconcat(inverse, cortImgPadded, mat);
         }
 
     }

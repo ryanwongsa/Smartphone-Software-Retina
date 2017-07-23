@@ -21,7 +21,7 @@
                         <rect key="frame" x="0.0" y="0.0" width="667" height="375"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="leopard.jpg" translatesAutoresizingMaskIntoConstraints="NO" id="QUx-mG-Ape">
+                            <imageView contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="leopard.jpg" translatesAutoresizingMaskIntoConstraints="NO" id="QUx-mG-Ape">
                                 <rect key="frame" x="0.0" y="0.0" width="667" height="375"/>
                                 <gestureRecognizers/>
                                 <connections>
@@ -39,6 +39,7 @@
                                                 <segment title="Colour"/>
                                                 <segment title="Cortex"/>
                                                 <segment title="Inverse"/>
+                                                <segment title="Combined"/>
                                             </segments>
                                             <connections>
                                                 <action selector="onColorModeSelected:" destination="BYZ-38-t0r" eventType="valueChanged" id="RK5-7J-jHj"/>
