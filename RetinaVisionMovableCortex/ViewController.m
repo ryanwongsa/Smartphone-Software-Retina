@@ -48,6 +48,8 @@
 @property int x;
 @property int y;
 @property int retinaRadius;
+// if 0 then it was previously going left, if 1 then it was previously going right.
+@property int gazePrev;
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -480,11 +482,28 @@
         kp.response = -1*kp.response;
         kp.pt.x = kp.pt.x+15;
         kp.pt.y = kp.pt.y+15;
+        
+        // distance
+        float dx = kp.pt.x - cortImg.cols/2;
+        float dy = kp.pt.y - cortImg.rows/2;
+        float dist = sqrt(dx*dx + dy*dy);
+//        NSLog(@"Distance is : %f",dist);
+//        kp.response=-1*(std::abs(kp.response)+dist);
+        kp.response*=dist;
+        
     }
     
     for(auto &kp : keypointsRight){
         kp.pt.x = kp.pt.x+15;
         kp.pt.y = kp.pt.y+15;
+        
+        // distance
+        float dx = kp.pt.x - cortImg.cols/2;
+        float dy = kp.pt.y - cortImg.rows/2;
+        float dist = sqrt(dx*dx + dy*dy);
+//        NSLog(@"Distance is : %f",dist);
+//        kp.response=kp.response+dist;
+        kp.response*=dist;
     }
     
     std::vector<cv::KeyPoint> keypointsAll;
@@ -496,6 +515,18 @@
     std::sort(keypointsAll.begin(), keypointsAll.end(), [](cv::KeyPoint a, cv::KeyPoint b) { return std::abs(a.response) > std::abs(b.response);});
     
     BOOL found=false;
+    
+    // using probability to switch gaze direction
+    int prob = arc4random() % 100;
+    if(prob <= 25){
+        NSLog(@"%@",@"Changing gaze direction");
+        if(self.gazePrev==1){
+            self.gazePrev=0;
+        }else if(self.gazePrev==0){
+            self.gazePrev=1;
+        }
+    }
+    
     for(cv::KeyPoint kp : keypointsAll){
         cv::Mat locHere;
         if(kp.response<=0){
@@ -521,10 +552,24 @@
                 // if retina is within image
                 if((tempInverseX>self.retinaRadius)&&(tempInverseY>self.retinaRadius)&&(tempInverseX<mat.cols-self.retinaRadius) && (tempInverseY<mat.rows-self.retinaRadius) ){
                     
-                    self.x = tempInverseX;
-                    self.y = tempInverseY;
-                    found=true;
-                    break;
+                    int tempGaze;
+                    // determine gaze direction
+                    if( kp.response < 0 ){
+                        tempGaze = 0;
+                    }
+                    else{
+                        tempGaze = 1;
+                    }
+                    
+                    if((tempGaze==self.gazePrev) ||(self.gazePrev==-1)){
+                        
+                        self.x = tempInverseX;
+                        self.y = tempInverseY;
+                        found=true;
+                        self.gazePrev =tempGaze;
+                        break;
+                    }
+                    
                 }
                 
             }
@@ -537,6 +582,11 @@
 //        NSLog(@"%@",@"Reseting retina position");
 //        self.x  = (int) (self.retinaRadius+15 + arc4random() % (mat.cols-2*self.retinaRadius-15));
 //        self.y  = (int) (self.retinaRadius+15 + arc4random() % (mat.rows-2*self.retinaRadius-15));
+        if(self.gazePrev==1){
+            self.gazePrev=0;
+        }else if(self.gazePrev==0){
+            self.gazePrev=1;
+        }
     }
     
     
@@ -602,6 +652,8 @@
             
             self.retinaRadius = (int)(std::max(maxVal0,maxVal1));
             NSLog(@"Retina Radius is: %d", self.retinaRadius);
+            
+            self.gazePrev=-1;
         }
         
         
