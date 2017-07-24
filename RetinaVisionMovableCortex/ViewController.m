@@ -47,6 +47,7 @@
 @property BOOL started;
 @property int x;
 @property int y;
+@property int retinaRadius;
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -465,139 +466,80 @@
 -(void)create_new_focal_point:(cv::Mat &)cortImg mat:(cv::Mat &)mat{
     std::vector<cv::KeyPoint> keypointsLeft;
     cv::Mat cortLeft_roi = cortImg(cv::Rect(15,15,cortImg.cols/2-30,cortImg.rows-30));
-    
     cv::FAST(cortLeft_roi, keypointsLeft, 20);
+    
+    
     
     std::vector<cv::KeyPoint> keypointsRight;
     cv::Mat cortRight_roi = cortImg(cv::Rect(cortImg.cols/2+15,15,cortImg.cols/2-30,cortImg.rows-30));
-    
     cv::FAST(cortRight_roi, keypointsRight, 20);
     
-    //            NSLog(@"%lu",keypoints.size());
-    //            NSLog(@"%d %d", cortImg.cols, cortImg.rows);
-    int tempX=0;
-    int tempY=0;
-    float tempBest = 0;
-    int leftorright=-1;
     
-    // For display purposes
-    //            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2BGR);
-    
-    //            for(int i=15;i<cortImg.cols/2-15;i++){
-    //                for(int j=15;j<cortImg.rows-15;j++){
-    //                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(j,i);
-    //                    keyVal[0]=255;
-    //                    keyVal[1]=0;
-    //                    keyVal[2]=0;
-    //                    cortImg.at<cv::Vec3b>(j,i) = keyVal;
-    //
-    //                }
-    //            }
-    //
-    //            for(int i=cortImg.cols/2+15;i<cortImg.cols-15;i++){
-    //                for(int j=15;j<cortImg.rows-15;j++){
-    //                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(j,i);
-    //                    keyVal[0]=255;
-    //                    keyVal[1]=0;
-    //                    keyVal[2]=0;
-    //                    cortImg.at<cv::Vec3b>(j,i) = keyVal;
-    //
-    //                }
-    //            }
-    
-    for(cv::KeyPoint kp : keypointsLeft){
-        float dx = (kp.pt.x-cortImg.cols/2);
-        float dy = (kp.pt.y-cortImg.rows/2);
-        float dist = sqrt(dx*dx+dy+dy)*kp.response;
-        
-        
-        if(tempBest<kp.response){
-            tempX=(int)kp.pt.x+15;
-            tempY=(int)kp.pt.y+15;
-            tempBest=kp.response;
-            leftorright=0;
-        }
+    // - reponse for left kp's
+    for(auto &kp : keypointsLeft){
+        kp.response = -1*kp.response;
+        kp.pt.x = kp.pt.x+15;
+        kp.pt.y = kp.pt.y+15;
     }
     
-    for(cv::KeyPoint kp : keypointsRight){
-        float dx = (kp.pt.x-cortImg.cols/2);
-        float dy = (kp.pt.y-cortImg.rows/2);
-        float dist = sqrt(dx*dx+dy+dy)*kp.response;
-        
-        if(tempBest<kp.response){
-            tempX=(int)kp.pt.x+15;
-            tempY=(int)kp.pt.y+15;
-            tempBest=kp.response;
-            leftorright=1;
-        }
+    for(auto &kp : keypointsRight){
+        kp.pt.x = kp.pt.x+15;
+        kp.pt.y = kp.pt.y+15;
     }
     
+    std::vector<cv::KeyPoint> keypointsAll;
+    keypointsAll.reserve(keypointsLeft.size()+keypointsRight.size());
+    keypointsAll.insert(keypointsAll.end(),keypointsLeft.begin(),keypointsLeft.end());
+    keypointsAll.insert(keypointsAll.end(),keypointsRight.begin(),keypointsRight.end());
     
-    if(leftorright==0){
-        // If Left
-        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(tempY,tempX);
-        keyVal[0]=0;
-        keyVal[1]=0;
-        keyVal[2]=255;
-        cortImg.at<cv::Vec3b>(tempY,tempX) = keyVal;
-        NSLog(@"Left %d %d", tempX,tempY);
-        for(int i=0;i<L_loc.rows;i++){
-            int xLocI_ceil =(int)ceilf(L_loc.at<float>(i,0));
-            int yLocI_ceil =(int)ceilf(L_loc.at<float>(i,1));
-            int xLocI_floor =(int)floorf(L_loc.at<float>(i,0));
-            int yLocI_floor =(int)floorf(L_loc.at<float>(i,1));
-            if(((xLocI_ceil==tempX)&&(yLocI_ceil==tempY))||((xLocI_ceil==tempX)&&(yLocI_floor==tempY))||((xLocI_floor==tempX)&&(yLocI_ceil==tempY))||((xLocI_floor==tempX)&&(yLocI_floor==tempY))){
-                NSLog(@"%@", @"They Match");
-                self.x+=L_loc.at<float>(i,2);
-                self.y+=L_loc.at<float>(i,3);
-                if((self.x<=50)||(self.x>=mat.cols-50)||(self.y>=mat.rows-50)||(self.y<=50)){
-                    NSLog(@"%@",@"RESET EDGE");
-                    int randX = (int) 50 + arc4random() % (mat.cols-50-50+1);
-                    int randY = (int) 50 + arc4random() % (mat.cols-50-50+1);
-                    self.x = randX;
-                    self.y = randY;
+    
+    std::sort(keypointsAll.begin(), keypointsAll.end(), [](cv::KeyPoint a, cv::KeyPoint b) { return std::abs(a.response) > std::abs(b.response);});
+    
+    BOOL found=false;
+    for(cv::KeyPoint kp : keypointsAll){
+        cv::Mat locHere;
+        if(kp.response<=0){
+            locHere=L_loc;
+        }
+        else{
+            locHere=R_loc;
+        }
+        
+        
+        for(int i=0;i<locHere.rows;i++){
+            int xLocI_ceil =(int)ceilf(locHere.at<float>(i,0));
+            int yLocI_ceil =(int)ceilf(locHere.at<float>(i,1));
+            int xLocI_floor =(int)floorf(locHere.at<float>(i,0));
+            int yLocI_floor =(int)floorf(locHere.at<float>(i,1));
+            int xVal = (int)kp.pt.x;
+            int yVal = (int)kp.pt.y;
+            if(( (xLocI_ceil==xVal) && (yLocI_ceil==yVal) )||( (xLocI_ceil==xVal) && (yLocI_floor==yVal) )||( (xLocI_floor==xVal) && (yLocI_ceil==yVal) )||( (xLocI_floor==xVal) && (yLocI_floor==yVal) )){
+                // Determine location of it in inverse image
+                int tempInverseX = self.x + locHere.at<float>(i,2);
+                int tempInverseY = self.y + locHere.at<float>(i,3);
+                
+                // if retina is within image
+                if((tempInverseX>self.retinaRadius)&&(tempInverseY>self.retinaRadius)&&(tempInverseX<mat.cols-self.retinaRadius) && (tempInverseY<mat.rows-self.retinaRadius) ){
+                    
+                    self.x = tempInverseX;
+                    self.y = tempInverseY;
+                    found=true;
+                    break;
                 }
-                break;
+                
             }
         }
-        
+        if(found){break;}
     }
-    else if(leftorright==1){
-        // If Right
-        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(tempY,tempX+cortImg.cols/2);
-        keyVal[0]=0;
-        keyVal[1]=0;
-        keyVal[2]=255;
-        cortImg.at<cv::Vec3b>(tempY,tempX+cortImg.cols/2) = keyVal;
-        NSLog(@"Right %d %d", tempX,tempY);
-        for(int i=0;i<R_loc.rows;i++){
-            int xLocI_ceil =(int)ceilf(R_loc.at<float>(i,0));
-            int yLocI_ceil =(int)ceilf(R_loc.at<float>(i,1));
-            int xLocI_floor =(int)floorf(R_loc.at<float>(i,0));
-            int yLocI_floor =(int)floorf(R_loc.at<float>(i,1));
-            if(((xLocI_ceil==tempX)&&(yLocI_ceil==tempY))||((xLocI_ceil==tempX)&&(yLocI_floor==tempY))||((xLocI_floor==tempX)&&(yLocI_ceil==tempY))||((xLocI_floor==tempX)&&(yLocI_floor==tempY))){
-                NSLog(@"%@", @"They Match");
-                self.x+=R_loc.at<float>(i,2);
-                self.y+=R_loc.at<float>(i,3);
-                if((self.x<=50)||(self.x>=mat.cols-50)||(self.y>=mat.rows-50)||(self.y<=50)){
-                    NSLog(@"%@",@"RESET EDGE");
-                    int randX = (int) 50 + arc4random() % (mat.cols-50-50+1);
-                    int randY = (int) 50 + arc4random() % (mat.cols-50-50+1);
-                    self.x = randX;
-                    self.y = randY;
-                }
-                break;
-            }
-        }
+    
+    if(!found){
+        // random reset
+//        NSLog(@"%@",@"Reseting retina position");
+//        self.x  = (int) (self.retinaRadius+15 + arc4random() % (mat.cols-2*self.retinaRadius-15));
+//        self.y  = (int) (self.retinaRadius+15 + arc4random() % (mat.rows-2*self.retinaRadius-15));
     }
-    else{
-        NSLog(@"%@",@"RESET");
-        int randX = (int) 50 + arc4random() % (mat.cols-50-50+1);
-        int randY = (int) 50 + arc4random() % (mat.cols-50-50+1);
-        self.x = randX;
-        self.y = randY;
-        
-    }
+    
+    
     
 }
 
@@ -651,6 +593,15 @@
             self.x = (int) shape1/2;
             self.y = (int) shape0/2;
             self.started=true;
+            double minVal0;
+            double maxVal0;
+            double minVal1;
+            double maxVal1;
+            cv::minMaxLoc(loc.col(0), &minVal0, &maxVal0);
+            cv::minMaxLoc(loc.col(1), &minVal1, &maxVal1);
+            
+            self.retinaRadius = (int)(std::max(maxVal0,maxVal1));
+            NSLog(@"Retina Radius is: %d", self.retinaRadius);
         }
         
         
@@ -689,6 +640,20 @@
             inverse.convertTo(inverse,CV_8U);
             
             // can convert to rgb inverse here
+            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
+            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+            
+            NSLog(@"%d %d",self.y,self.x);
+            for(int i=self.y-3;i<self.y+3;i++){
+                for(int j=self.x-3;j<self.x+3;j++){
+                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
+                    keyVal[0]=255;
+                    keyVal[1]=0;
+                    keyVal[2]=0;
+                    inverse.at<cv::Vec3b>(i,j) = keyVal;
+                }
+            }
+            
             
             cv::Mat cortImgPadded;
             cv::copyMakeBorder(cortImg, cortImgPadded, (inverse.rows-cortImg.rows)/2+1, (inverse.rows-cortImg.rows)/2, 0, 0, cv::BORDER_CONSTANT,cv::Scalar(0));
