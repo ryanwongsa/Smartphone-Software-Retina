@@ -50,6 +50,12 @@
 @property int retinaRadius;
 // if 0 then it was previously going left, if 1 then it was previously going right.
 @property int gazePrev;
+@property float xd;
+@property float yd;
+@property float l_min0;
+@property float l_min1;
+@property float r_min0;
+@property float r_min1;
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -211,15 +217,28 @@
     shape0 = [singleStr5[0] intValue];
     shape1 = [singleStr5[1] intValue];
     
+    strsInOneLine5 = [allLinedStrings5 objectAtIndex:1];
+    singleStr5 = [strsInOneLine5 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
+    
+    self.yd = [singleStr5[0] floatValue];
+    self.xd = [singleStr5[1] floatValue];
+    
+    strsInOneLine5 = [allLinedStrings5 objectAtIndex:2];
+    singleStr5 = [strsInOneLine5 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
+    
+    self.l_min0 = [singleStr5[0] floatValue];
+    self.l_min1 = [singleStr5[1] floatValue];
+    
+    
     L_loc = cv::Mat(shape0,shape1,CV_32F ,0.0);
     
-    for(int i=1;i< (int)([allLinedStrings5 count]-1);i++){
+    for(int i=3;i< (int)([allLinedStrings5 count]-1);i++){
         NSString* elements = allLinedStrings5[i];
         //            NSLog(@"%@", elements);
         NSArray* singleStrs = [elements componentsSeparatedByCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"#"]];
         //            NSLog(@"%@",singleStrs);
         for(int j=0;j<(int)[singleStrs count];j++){
-            L_loc.at<float>(i-1,j) = [singleStrs[j] floatValue];
+            L_loc.at<float>(i-3,j) = [singleStrs[j] floatValue];
         }
     }
     //        print(L_loc);
@@ -237,15 +256,23 @@
     shape0 = [singleStr6[0] intValue];
     shape1 = [singleStr6[1] intValue];
     
+    
+    strsInOneLine5 = [allLinedStrings5 objectAtIndex:2];
+    singleStr5 = [strsInOneLine5 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
+    
+    self.r_min0 = [singleStr5[0] floatValue];
+    self.r_min1 = [singleStr5[1] floatValue];
+    NSLog(@"%f %f %f %f %f %f", self.yd, self.xd,self.l_min0, self.l_min1, self.r_min0, self.r_min1);
+    
     R_loc = cv::Mat(shape0,shape1,CV_32F ,0.0);
     
-    for(int i=1;i< (int)([allLinedStrings6 count]-1);i++){
+    for(int i=3;i< (int)([allLinedStrings6 count]-1);i++){
         NSString* elements = allLinedStrings6[i];
         //            NSLog(@"%@", elements);
         NSArray* singleStrs = [elements componentsSeparatedByCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"#"]];
         //            NSLog(@"%@",singleStrs);
         for(int j=0;j<(int)[singleStrs count];j++){
-            R_loc.at<float>(i-1,j) = [singleStrs[j] floatValue];
+            R_loc.at<float>(i-3,j) = [singleStrs[j] floatValue];
         }
     }
     
@@ -527,58 +554,214 @@
         }
     }
     
-    for(cv::KeyPoint kp : keypointsAll){
+    // starting HERE
+    int leftorright=-1;
+//    for(cv::KeyPoint kp : keypointsAll){
+    cv::KeyPoint kp = keypointsAll[0];
+    
+    // adding point here for seeing it
+    cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+    kp.pt.x = cortImg.cols/8;
+    kp.pt.y = cortImg.rows/2;
+    
         cv::Mat locHere;
         if(kp.response<=0){
             locHere=L_loc;
+            leftorright=0;
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+            keyVal[0]=255;
+            keyVal[1]=0;
+            keyVal[2]=0;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
         }
         else{
             locHere=R_loc;
+            leftorright=1;
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2);
+            keyVal[0]=255;
+            keyVal[1]=0;
+            keyVal[2]=0;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2) = keyVal;
         }
         
         
-        for(int i=0;i<locHere.rows;i++){
-            int xLocI_ceil =(int)ceilf(locHere.at<float>(i,0));
-            int yLocI_ceil =(int)ceilf(locHere.at<float>(i,1));
-            int xLocI_floor =(int)floorf(locHere.at<float>(i,0));
-            int yLocI_floor =(int)floorf(locHere.at<float>(i,1));
-            int xVal = (int)kp.pt.x;
-            int yVal = (int)kp.pt.y;
-            if(( (xLocI_ceil==xVal) && (yLocI_ceil==yVal) )||( (xLocI_ceil==xVal) && (yLocI_floor==yVal) )||( (xLocI_floor==xVal) && (yLocI_ceil==yVal) )||( (xLocI_floor==xVal) && (yLocI_floor==yVal) )){
-                // Determine location of it in inverse image
-                int tempInverseX = self.x + locHere.at<float>(i,2);
-                int tempInverseY = self.y + locHere.at<float>(i,3);
-                
-                // if retina is within image
-                if((tempInverseX>self.retinaRadius)&&(tempInverseY>self.retinaRadius)&&(tempInverseX<mat.cols-self.retinaRadius) && (tempInverseY<mat.rows-self.retinaRadius) ){
-                    
-                    int tempGaze;
-                    // determine gaze direction
-                    if( kp.response < 0 ){
-                        tempGaze = 0;
-                    }
-                    else{
-                        tempGaze = 1;
-                    }
-                    
-                    if((tempGaze==self.gazePrev) ||(self.gazePrev==-1)){
-                        
-                        self.x = tempInverseX;
-                        self.y = tempInverseY;
-                        found=true;
-                        self.gazePrev =tempGaze;
-                        break;
-                    }
-                    
-                }
-                
-            }
+//        for(int i=0;i<locHere.rows;i++){
+//            int xLocI_ceil =(int)ceilf(locHere.at<float>(i,0));
+//            int yLocI_ceil =(int)ceilf(locHere.at<float>(i,1));
+//            int xLocI_floor =(int)floorf(locHere.at<float>(i,0));
+//            int yLocI_floor =(int)floorf(locHere.at<float>(i,1));
+//        int xVal = (int)kp.pt.x;
+//        int yVal = (int)kp.pt.y;
+        NSLog(@"%d ===== %f %f", leftorright, kp.pt.x, kp.pt.y);
+        cv::Point2f center((cortImg.cols/2.0)/2.0, cortImg.rows/2.0);
+    NSLog(@"Center is : %f %f",  center.x, center.y);
+        cv::Point2f trans_pt = kp.pt - center;
+    NSLog(@"new point wrt center is : %f %f",  trans_pt.x, trans_pt.y);
+        
+    float xTemp;
+    float yTemp;
+        if(leftorright==0){
+//            rotation = -1.0/2.0*M_PI;
+            xTemp = trans_pt.y;
+            yTemp = -trans_pt.x;
+            NSLog(@"check with next: %f %f", trans_pt.y, -trans_pt.x);
         }
-        if(found){break;}
+        else{
+            xTemp = -trans_pt.y;
+            yTemp = trans_pt.x;
+//            rotation = 3.0/2.0*M_PI;
+        }
+//        float xTemp = std::cos(rotation) * trans_pt.x - std::sin(rotation) * trans_pt.y;
+//        float yTemp = std::sin(rotation) * trans_pt.x - std::cos(rotation) * trans_pt.y;
+        cv::Point2f rot_p(xTemp, yTemp);
+    NSLog(@" rotated %f %f", rot_p.x, rot_p.y);
+        cv::Point2f fin_pt = rot_p + center;
+        NSLog(@"%f %f", fin_pt.x, fin_pt.y);
+    
+    // scaling factor fixing
+        fin_pt = fin_pt*2;
+        NSLog(@"%f %f", fin_pt.x, fin_pt.y);
+    
+    // k_width fixing
+        fin_pt.x = fin_pt.x - 7;
+        fin_pt.y = fin_pt.y - 7;
+        NSLog(@"%f %f", fin_pt.x, fin_pt.y);
+    
+    if(leftorright==0){
+        fin_pt.y = self.l_min1 + fin_pt.y;
+        fin_pt.x = self.l_min0 + fin_pt.x;
+    }
+    else{
+        fin_pt.y = self.r_min1 + fin_pt.y;
+        fin_pt.x = self.r_min0 + fin_pt.x;
+    }
+    NSLog(@"%f %f", fin_pt.x, fin_pt.y);
+    
+    fin_pt.y = - fin_pt.y;
+    fin_pt.x = fin_pt.x * self.xd / self.yd;
+    NSLog(@"xdyd fixed: %f %f", fin_pt.x, fin_pt.y);
+    
+    
+    
+    float theta=0;
+    float r = 0;
+    if(leftorright==0){
+        if(fin_pt.x>0){
+            NSLog(@"We are in the 3rd quadrant %@",@"3");
+            theta= fin_pt.x+M_PI;
+            r =fin_pt.y;
+            NSLog(@"theta, r: %f %f", theta, r);
+            
+            float tan_theta = std::tan(theta);
+            NSLog(@"theta: %f", tan_theta);
+            
+            float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
+//            finalX = -(self.retinaRadius + finalX);
+            float finalY = tan_theta*(finalX);//-15);
+//            NSLog(@"FINAL: %f %f", finalX, -finalY);
+            finalX = -(self.retinaRadius + finalX)-15;
+            finalY = finalY-15;
+            
+            
+            NSLog(@"FINAL: %f %f", finalX, -finalY);
+            self.x = self.x + finalX;
+            self.y = self.y - finalY;
+        }
+        else{
+            NSLog(@"We are in the 2rd quadrant %@",@"2");
+            theta= fin_pt.x-M_PI;
+            r =fin_pt.y;
+            float tan_theta = std::tan(theta);
+            NSLog(@"theta: %f", tan_theta);
+            
+            float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
+//            finalX = -(self.retinaRadius + finalX);
+            float finalY = tan_theta*(finalX);//-15);
+//            NSLog(@"FINAL: %f %f", finalX, -finalY);
+            finalX = -(self.retinaRadius + finalX)-15;
+            finalY = finalY-15;
+            
+            
+            NSLog(@"FINAL: %f %f", finalX, -finalY);
+            self.x = self.x + finalX;
+            self.y = self.y - finalY;
+        }
+    }
+    else{
+        theta = fin_pt.x;
+        r =fin_pt.y;
+        NSLog(@"theta, r: %f %f", theta, r);
+        if(fin_pt.x>0){
+            NSLog(@"We are in the 1st quadrant %@",@"1");
+            float tan_theta = std::tan(theta);
+            NSLog(@"theta: %f", tan_theta);
+            float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta))-15;
+            float finalY = tan_theta*(finalX+15);
+            
+            NSLog(@"FINAL: %f %f", finalX, -finalY);
+            self.x = self.x + finalX;
+            self.y = self.y - finalY;
+        }
+        else{
+            NSLog(@"We are in the 4th quadrant %@",@"4");
+            float tan_theta = std::tan(theta);
+            NSLog(@"theta: %f", tan_theta);
+            float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta))-15;
+            float finalY = tan_theta*(finalX+15);
+            
+            NSLog(@"FINAL: %f %f", finalX, -finalY);
+            self.x = self.x + finalX;
+            self.y = self.y - finalY;
+            
+        }
     }
     
+    
+//        for(int i=0;i<locHere.rows;i++){
+//            int xLocI_ceil =(int)ceilf(locHere.at<float>(i,0));
+//            int yLocI_ceil =(int)ceilf(locHere.at<float>(i,1));
+//            int xLocI_floor =(int)floorf(locHere.at<float>(i,0));
+//            int yLocI_floor =(int)floorf(locHere.at<float>(i,1));
+//            int xVal = (int)kp.pt.x;
+//            int yVal = (int)kp.pt.y;
+//            if(( (xLocI_ceil==xVal) && (yLocI_ceil==yVal) )||( (xLocI_ceil==xVal) && (yLocI_floor==yVal) )||( (xLocI_floor==xVal) && (yLocI_ceil==yVal) )||( (xLocI_floor==xVal) && (yLocI_floor==yVal) )){
+////                // Determine location of it in inverse image
+////                int tempInverseX = self.x + locHere.at<float>(i,2);
+////                int tempInverseY = self.y + locHere.at<float>(i,3);
+//                NSLog(@"Does it match here: %f %f", locHere.at<float>(i,2),locHere.at<float>(i,3));
+//            }
+//        }
+//
+//                // if retina is within image
+//                if((tempInverseX>self.retinaRadius)&&(tempInverseY>self.retinaRadius)&&(tempInverseX<mat.cols-self.retinaRadius) && (tempInverseY<mat.rows-self.retinaRadius) ){
+//                    
+//                    int tempGaze;
+//                    // determine gaze direction
+//                    if( kp.response < 0 ){
+//                        tempGaze = 0;
+//                    }
+//                    else{
+//                        tempGaze = 1;
+//                    }
+//                    
+//                    if((tempGaze==self.gazePrev) ||(self.gazePrev==-1)){
+//                        
+//                        self.x = tempInverseX;
+//                        self.y = tempInverseY;
+//                        found=true;
+//                        self.gazePrev =tempGaze;
+//                        break;
+//                    }
+//                    
+//                }
+//                
+//            }
+//        }
+//        if(found){break;}
+//    }
+    
     if(!found){
-        // random reset
+// random reset
 //        NSLog(@"%@",@"Reseting retina position");
 //        self.x  = (int) (self.retinaRadius+15 + arc4random() % (mat.cols-2*self.retinaRadius-15));
 //        self.y  = (int) (self.retinaRadius+15 + arc4random() % (mat.rows-2*self.retinaRadius-15));
@@ -588,8 +771,6 @@
             self.gazePrev=1;
         }
     }
-    
-    
     
 }
 
@@ -693,7 +874,7 @@
             
             // can convert to rgb inverse here
             cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
-            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+//            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
             
             NSLog(@"%d %d",self.y,self.x);
             for(int i=self.y-3;i<self.y+3;i++){
@@ -924,7 +1105,7 @@
         }
         
         
-
+        
         cv::Mat g = G[dx][dy](cv::Rect(0,0,x2-x1,y2-y1));
         
 //        NSLog(@"%d %d %d %d", x1,x2,y1,y2);
@@ -1013,7 +1194,7 @@
     cv::rotate(left, left, 2);
     cv::rotate(right, right, 0);
     cv::hconcat(left,right, cortImg);
-    
+//    NSLog(@"check check %d %d %d %d %d %d",left.rows, left.cols,right.rows, right.cols,cortImg.rows, cortImg.cols);
     return cortImg;
 }
 
