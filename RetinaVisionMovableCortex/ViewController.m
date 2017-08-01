@@ -556,33 +556,35 @@
     
     // starting HERE
     int leftorright=-1;
-//    for(cv::KeyPoint kp : keypointsAll){
-    cv::KeyPoint kp = keypointsAll[0];
+    for(cv::KeyPoint kp : keypointsAll){
+//    cv::KeyPoint kp = keypointsAll[0];
     
     // adding point here for seeing it
-    cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
 //    kp.pt.x = cortImg.cols/4;
 //    kp.pt.y = cortImg.rows/4;//cortImg.rows/4;
 //    kp.response=1;
     
+        
+//        cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+
         cv::Mat locHere;
         if(kp.response<=0){
             locHere=L_loc;
             leftorright=0;
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
-            keyVal[0]=255;
-            keyVal[1]=0;
-            keyVal[2]=0;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+//            keyVal[0]=255;
+//            keyVal[1]=0;
+//            keyVal[2]=0;
+//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
         }
         else{
             locHere=R_loc;
             leftorright=1;
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2);
-            keyVal[0]=255;
-            keyVal[1]=0;
-            keyVal[2]=0;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2) = keyVal;
+//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2);
+//            keyVal[0]=255;
+//            keyVal[1]=0;
+//            keyVal[2]=0;
+//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2) = keyVal;
         }
         
         
@@ -646,6 +648,8 @@
     
     float theta=0;
     float r = 0;
+        float finalX=0;
+        float finalY=0;
     if(leftorright==0){
         if(fin_pt.x>0){
             NSLog(@"We are in the 3rd quadrant %@",@"3");
@@ -679,17 +683,17 @@
         float tan_theta = std::tan(theta);
         NSLog(@"theta: %f", tan_theta);
         
-        float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
+        finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
         //            finalX = -(self.retinaRadius + finalX);
-        float finalY = tan_theta*(finalX);//-15);
+        finalY = tan_theta*(finalX);//-15);
         NSLog(@"FINAL: %f %f", finalX, finalY);
         //            finalX = -(self.retinaRadius + finalX+15);
         
         
         
         NSLog(@"FINAL: %f %f", finalX, -finalY);
-        self.x = self.x + finalX;
-        self.y = self.y - finalY;
+//        self.x = self.x + finalX;
+//        self.y = self.y - finalY;
     }
     else{
         theta = fin_pt.x;
@@ -714,14 +718,49 @@
         
         float tan_theta = std::tan(theta);
         NSLog(@"theta: %f", tan_theta);
-        float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta));//-15;
-        float finalY = tan_theta*(finalX);
+        finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta));//-15;
+        finalY = tan_theta*(finalX);
         
         NSLog(@"FINAL: %f %f", finalX, -finalY);
-        self.x = self.x + finalX;
-        self.y = self.y - finalY;
+//        self.x = self.x + finalX;
+//        self.y = self.y - finalY;
+    }
+        
+        int tempInverseX = self.x + finalX;
+        int tempInverseY = self.y - finalY;
+        NSLog(@"FINAL ON ORIGINAL: %d %d %d %d", self.x, self.y ,tempInverseX, tempInverseY);
+        if((tempInverseX>self.retinaRadius)&&(tempInverseY>self.retinaRadius)&&(tempInverseX<mat.cols-self.retinaRadius) && (tempInverseY<mat.rows-self.retinaRadius) ){
+            NSLog(@"WE HAVE MADE IT TO BEFORE THE END! %@",@"");
+                            int tempGaze;
+                            // determine gaze direction
+                            if( kp.response < 0 ){
+                                tempGaze = 0;
+                            }
+                            else{
+                                tempGaze = 1;
+                            }
+            NSLog(@"WE HAVE MADE IT TO SLIGHTLY BEFORE THE END! %@",@"");
+
+        
+                            if((tempGaze==self.gazePrev) ||(self.gazePrev==-1)){
+        
+                                self.x = tempInverseX;
+                                self.y = tempInverseY;
+                                found=true;
+                                self.gazePrev =tempGaze;
+                                NSLog(@"WE HAVE MADE IT TO THE END! %@",@"");
+                                break;
+                            }
+        }
     }
     
+    if(!found){
+        if(self.gazePrev==1){
+            self.gazePrev=0;
+        }else if(self.gazePrev==0){
+            self.gazePrev=1;
+        }
+    }
     
 //        for(int i=0;i<locHere.rows;i++){
 //            int xLocI_ceil =(int)ceilf(locHere.at<float>(i,0));
@@ -879,19 +918,19 @@
             inverse.convertTo(inverse,CV_8U);
             
             // can convert to rgb inverse here
-            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
+//            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
 //            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
             
-            NSLog(@"%d %d",self.y,self.x);
-            for(int i=self.y-3;i<self.y+3;i++){
-                for(int j=self.x-3;j<self.x+3;j++){
-                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
-                    keyVal[0]=255;
-                    keyVal[1]=0;
-                    keyVal[2]=0;
-                    inverse.at<cv::Vec3b>(i,j) = keyVal;
-                }
-            }
+//            NSLog(@"%d %d",self.y,self.x);
+//            for(int i=self.y-3;i<self.y+3;i++){
+//                for(int j=self.x-3;j<self.x+3;j++){
+//                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
+//                    keyVal[0]=255;
+//                    keyVal[1]=0;
+//                    keyVal[2]=0;
+//                    inverse.at<cv::Vec3b>(i,j) = keyVal;
+//                }
+//            }
             
             
             cv::Mat cortImgPadded;
