@@ -561,8 +561,9 @@
     
     // adding point here for seeing it
     cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
-    kp.pt.x = cortImg.cols/8;
-    kp.pt.y = cortImg.rows/2;
+//    kp.pt.x = cortImg.cols/4;
+//    kp.pt.y = cortImg.rows/4;//cortImg.rows/4;
+//    kp.response=1;
     
         cv::Mat locHere;
         if(kp.response<=0){
@@ -649,43 +650,46 @@
         if(fin_pt.x>0){
             NSLog(@"We are in the 3rd quadrant %@",@"3");
             theta= fin_pt.x+M_PI;
-            r =fin_pt.y;
-            NSLog(@"theta, r: %f %f", theta, r);
-            
-            float tan_theta = std::tan(theta);
-            NSLog(@"theta: %f", tan_theta);
-            
-            float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
-//            finalX = -(self.retinaRadius + finalX);
-            float finalY = tan_theta*(finalX);//-15);
+//            r =fin_pt.y;
+//            NSLog(@"theta, r: %f %f", theta, r);
+//            
+//            float tan_theta = std::tan(theta);
+//            NSLog(@"theta: %f", tan_theta);
+//            
+//            float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
+////            finalX = -(self.retinaRadius + finalX);
+//            float finalY = tan_theta*(finalX);//-15);
+////            NSLog(@"FINAL: %f %f", finalX, -finalY);
+//            finalX = -(self.retinaRadius + finalX+15);
+//            finalY = finalY-15;
+//            
+//            
 //            NSLog(@"FINAL: %f %f", finalX, -finalY);
-            finalX = -(self.retinaRadius + finalX)-15;
-            finalY = finalY-15;
-            
-            
-            NSLog(@"FINAL: %f %f", finalX, -finalY);
-            self.x = self.x + finalX;
-            self.y = self.y - finalY;
+//            self.x = self.x + finalX;
+//            self.y = self.y - finalY;
         }
         else{
             NSLog(@"We are in the 2rd quadrant %@",@"2");
             theta= fin_pt.x-M_PI;
-            r =fin_pt.y;
-            float tan_theta = std::tan(theta);
-            NSLog(@"theta: %f", tan_theta);
             
-            float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
-//            finalX = -(self.retinaRadius + finalX);
-            float finalY = tan_theta*(finalX);//-15);
-//            NSLog(@"FINAL: %f %f", finalX, -finalY);
-            finalX = -(self.retinaRadius + finalX)-15;
-            finalY = finalY-15;
-            
-            
-            NSLog(@"FINAL: %f %f", finalX, -finalY);
-            self.x = self.x + finalX;
-            self.y = self.y - finalY;
         }
+        r =fin_pt.y;
+        NSLog(@"theta, r: %f %f", theta, r);
+        
+        float tan_theta = std::tan(theta);
+        NSLog(@"theta: %f", tan_theta);
+        
+        float finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
+        //            finalX = -(self.retinaRadius + finalX);
+        float finalY = tan_theta*(finalX);//-15);
+        NSLog(@"FINAL: %f %f", finalX, finalY);
+        //            finalX = -(self.retinaRadius + finalX+15);
+        
+        
+        
+        NSLog(@"FINAL: %f %f", finalX, -finalY);
+        self.x = self.x + finalX;
+        self.y = self.y - finalY;
     }
     else{
         theta = fin_pt.x;
@@ -693,27 +697,29 @@
         NSLog(@"theta, r: %f %f", theta, r);
         if(fin_pt.x>0){
             NSLog(@"We are in the 1st quadrant %@",@"1");
-            float tan_theta = std::tan(theta);
-            NSLog(@"theta: %f", tan_theta);
-            float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta))-15;
-            float finalY = tan_theta*(finalX+15);
             
-            NSLog(@"FINAL: %f %f", finalX, -finalY);
-            self.x = self.x + finalX;
-            self.y = self.y - finalY;
         }
         else{
             NSLog(@"We are in the 4th quadrant %@",@"4");
-            float tan_theta = std::tan(theta);
-            NSLog(@"theta: %f", tan_theta);
-            float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta))-15;
-            float finalY = tan_theta*(finalX+15);
-            
-            NSLog(@"FINAL: %f %f", finalX, -finalY);
-            self.x = self.x + finalX;
-            self.y = self.y - finalY;
+//            float tan_theta = std::tan(theta);
+//            NSLog(@"theta: %f", tan_theta);
+//            float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta))-15;
+//            float finalY = tan_theta*(finalX+15);
+//            
+//            NSLog(@"FINAL: %f %f", finalX, -finalY);
+//            self.x = self.x + finalX;
+//            self.y = self.y - finalY;
             
         }
+        
+        float tan_theta = std::tan(theta);
+        NSLog(@"theta: %f", tan_theta);
+        float finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta));//-15;
+        float finalY = tan_theta*(finalX);
+        
+        NSLog(@"FINAL: %f %f", finalX, -finalY);
+        self.x = self.x + finalX;
+        self.y = self.y - finalY;
     }
     
     
