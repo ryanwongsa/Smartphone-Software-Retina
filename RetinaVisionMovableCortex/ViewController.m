@@ -257,11 +257,11 @@
     shape1 = [singleStr6[1] intValue];
     
     
-    strsInOneLine5 = [allLinedStrings5 objectAtIndex:2];
-    singleStr5 = [strsInOneLine5 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
+    strsInOneLine6 = [allLinedStrings6 objectAtIndex:2];
+    singleStr6 = [strsInOneLine6 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
     
-    self.r_min0 = [singleStr5[0] floatValue];
-    self.r_min1 = [singleStr5[1] floatValue];
+    self.r_min0 = [singleStr6[0] floatValue];
+    self.r_min1 = [singleStr6[1] floatValue];
     NSLog(@"%f %f %f %f %f %f", self.yd, self.xd,self.l_min0, self.l_min1, self.r_min0, self.r_min1);
     
     R_loc = cv::Mat(shape0,shape1,CV_32F ,0.0);
@@ -560,31 +560,33 @@
 //    cv::KeyPoint kp = keypointsAll[0];
     
     // adding point here for seeing it
-//    kp.pt.x = cortImg.cols/4;
-//    kp.pt.y = cortImg.rows/4;//cortImg.rows/4;
-//    kp.response=1;
+//    kp.pt.x = 10;//cortImg.cols/2-15;
+//    kp.pt.y = 0;//cortImg.rows/4;
+//    kp.response=-1;
     
         
-//        cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+        cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
 
         cv::Mat locHere;
         if(kp.response<=0){
+            NSLog(@"%@",@"LEFT");
             locHere=L_loc;
             leftorright=0;
-//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
-//            keyVal[0]=255;
-//            keyVal[1]=0;
-//            keyVal[2]=0;
-//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+            keyVal[0]=255;
+            keyVal[1]=0;
+            keyVal[2]=0;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
         }
         else{
+            NSLog(@"%@",@"RIGHT");
             locHere=R_loc;
             leftorright=1;
-//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2);
-//            keyVal[0]=255;
-//            keyVal[1]=0;
-//            keyVal[2]=0;
-//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2) = keyVal;
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
+            keyVal[0]=255;
+            keyVal[1]=0;
+            keyVal[2]=0;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
         }
         
         
@@ -595,8 +597,10 @@
 //            int yLocI_floor =(int)floorf(locHere.at<float>(i,1));
 //        int xVal = (int)kp.pt.x;
 //        int yVal = (int)kp.pt.y;
+    kp.pt.y = -kp.pt.y;
         NSLog(@"%d ===== %f %f", leftorright, kp.pt.x, kp.pt.y);
-        cv::Point2f center((cortImg.cols/2.0)/2.0, cortImg.rows/2.0);
+
+        cv::Point2f center((cortImg.cols/2.0-1)/2.0, -(cortImg.rows-1)/2.0);
     NSLog(@"Center is : %f %f",  center.x, center.y);
         cv::Point2f trans_pt = kp.pt - center;
     NSLog(@"new point wrt center is : %f %f",  trans_pt.x, trans_pt.y);
@@ -619,31 +623,39 @@
         cv::Point2f rot_p(xTemp, yTemp);
     NSLog(@" rotated %f %f", rot_p.x, rot_p.y);
         cv::Point2f fin_pt = rot_p + center;
+    fin_pt.y=-fin_pt.y;
         NSLog(@"%f %f", fin_pt.x, fin_pt.y);
     
+//    fin_pt.x = 24.4552818404;//cortImg.cols/2-15;
+//    fin_pt.y = 5.577756237;//cortImg.rows-3;//cortImg.rows/4;
+    NSLog(@"TEST 1 === %f %f",fin_pt.x, fin_pt.y);
     // scaling factor fixing
-        fin_pt = fin_pt*2;
+        fin_pt = fin_pt*2.0;
         NSLog(@"%f %f", fin_pt.x, fin_pt.y);
-    
+    NSLog(@"TEST 2 === %f %f",fin_pt.x, fin_pt.y);
     // k_width fixing
         fin_pt.x = fin_pt.x - 7;
         fin_pt.y = fin_pt.y - 7;
         NSLog(@"%f %f", fin_pt.x, fin_pt.y);
     
+    NSLog(@"TEST 3 === %f %f",fin_pt.x, fin_pt.y);
     if(leftorright==0){
         fin_pt.y = self.l_min1 + fin_pt.y;
         fin_pt.x = self.l_min0 + fin_pt.x;
     }
     else{
+        NSLog(@"Ry_MIN : %f", self.r_min1);
         fin_pt.y = self.r_min1 + fin_pt.y;
         fin_pt.x = self.r_min0 + fin_pt.x;
     }
     NSLog(@"%f %f", fin_pt.x, fin_pt.y);
+    NSLog(@"TEST 4 === %f %f",fin_pt.x, fin_pt.y);
     
     fin_pt.y = - fin_pt.y;
+    NSLog(@"TEST 5 === %f %f",fin_pt.x, fin_pt.y);
     fin_pt.x = fin_pt.x * self.xd / self.yd;
     NSLog(@"xdyd fixed: %f %f", fin_pt.x, fin_pt.y);
-    
+    NSLog(@"TEST 6 === %f %f",fin_pt.x, fin_pt.y);
     
     
     float theta=0;
@@ -686,12 +698,13 @@
         finalX = -std::sqrt((r*r)/(1+tan_theta*tan_theta));//+15;
         //            finalX = -(self.retinaRadius + finalX);
         finalY = tan_theta*(finalX);//-15);
+        finalX = finalX+15;
         NSLog(@"FINAL: %f %f", finalX, finalY);
         //            finalX = -(self.retinaRadius + finalX+15);
         
         
         
-        NSLog(@"FINAL: %f %f", finalX, -finalY);
+        NSLog(@"FINAL: %f %f", finalX, finalY);
 //        self.x = self.x + finalX;
 //        self.y = self.y - finalY;
     }
@@ -699,6 +712,7 @@
         theta = fin_pt.x;
         r =fin_pt.y;
         NSLog(@"theta, r: %f %f", theta, r);
+        
         if(fin_pt.x>0){
             NSLog(@"We are in the 1st quadrant %@",@"1");
             
@@ -720,14 +734,16 @@
         NSLog(@"theta: %f", tan_theta);
         finalX = std::sqrt((r*r)/(1+tan_theta*tan_theta));//-15;
         finalY = tan_theta*(finalX);
+        finalX = finalX-15;
         
-        NSLog(@"FINAL: %f %f", finalX, -finalY);
+        NSLog(@"FINAL: %f %f", finalX, finalY);
 //        self.x = self.x + finalX;
 //        self.y = self.y - finalY;
     }
-        
+//          self.x = self.x + finalX; // remove this
+//          self.y = self.y + finalY; // remove this
         int tempInverseX = self.x + finalX;
-        int tempInverseY = self.y - finalY;
+        int tempInverseY = self.y + finalY;
         NSLog(@"FINAL ON ORIGINAL: %d %d %d %d", self.x, self.y ,tempInverseX, tempInverseY);
         if((tempInverseX>self.retinaRadius)&&(tempInverseY>self.retinaRadius)&&(tempInverseX<mat.cols-self.retinaRadius) && (tempInverseY<mat.rows-self.retinaRadius) ){
             NSLog(@"WE HAVE MADE IT TO BEFORE THE END! %@",@"");
@@ -918,19 +934,19 @@
             inverse.convertTo(inverse,CV_8U);
             
             // can convert to rgb inverse here
-//            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
+            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
 //            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
             
-//            NSLog(@"%d %d",self.y,self.x);
-//            for(int i=self.y-3;i<self.y+3;i++){
-//                for(int j=self.x-3;j<self.x+3;j++){
-//                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
-//                    keyVal[0]=255;
-//                    keyVal[1]=0;
-//                    keyVal[2]=0;
-//                    inverse.at<cv::Vec3b>(i,j) = keyVal;
-//                }
-//            }
+            NSLog(@"%d %d",self.y,self.x);
+            for(int i=self.y-3;i<self.y+3;i++){
+                for(int j=self.x-3;j<self.x+3;j++){
+                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
+                    keyVal[0]=255;
+                    keyVal[1]=0;
+                    keyVal[2]=0;
+                    inverse.at<cv::Vec3b>(i,j) = keyVal;
+                }
+            }
             
             
             cv::Mat cortImgPadded;
