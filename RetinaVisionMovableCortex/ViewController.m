@@ -14,6 +14,7 @@
 #import <opencv2/imgproc.hpp>
 #import <opencv2/highgui/highgui.hpp>
 #import <opencv2/xfeatures2d.hpp>
+#import <opencv2/calib3d/calib3d.hpp>
 
 #import "ViewController.h"
 #import "VideoCamera.h"
@@ -32,6 +33,8 @@
     cv::Mat GI;
     cv::Mat loc;
     cv::Mat coeff[8192]; // Hardcoded value, note need to change this depending on coeff file.
+    cv::Mat l_mask;
+    cv::Mat r_mask;
 }
 
 @property IBOutlet UIImageView *imageView;
@@ -338,6 +341,52 @@
         
     }
     
+    NSString* filePath10 = @"mask_left_file";
+    NSString* fileRoot10 = [[NSBundle mainBundle] pathForResource:filePath10 ofType:@"txt"];
+    NSString* fileContents10 = [NSString stringWithContentsOfFile:fileRoot10 encoding:NSUTF8StringEncoding error:nil];
+    
+    NSArray* allLinedStrings10 = [fileContents10 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    
+    NSString* strsInOneLine10 = [allLinedStrings10 objectAtIndex:0];
+    NSArray* singleStr10= [strsInOneLine10 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
+    shape0 = [singleStr10[0] intValue];
+    shape1 = [singleStr10[1] intValue];
+    l_mask = cv::Mat(shape0,shape1,CV_32F,0.0);
+    for(int i=1;i< (int)([allLinedStrings10 count]);i++){
+        NSString* elements = allLinedStrings10[i];
+        
+        NSArray* parts = [elements componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"#"]];
+        for(int j=0;j< shape1;j++){
+//            NSLog(@"%@",parts[j]);
+            l_mask.at<float>(i-1,j) = [parts[j] floatValue];
+        }
+        
+    }
+//    print(l_mask);
+
+    
+    NSString* filePath11 = @"mask_right_file";
+    NSString* fileRoot11 = [[NSBundle mainBundle] pathForResource:filePath11 ofType:@"txt"];
+    NSString* fileContents11 = [NSString stringWithContentsOfFile:fileRoot11 encoding:NSUTF8StringEncoding error:nil];
+    
+    NSArray* allLinedStrings11 = [fileContents11 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    
+    NSString* strsInOneLine11 = [allLinedStrings11 objectAtIndex:0];
+    NSArray* singleStr11= [strsInOneLine11 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
+    shape0 = [singleStr11[0] intValue];
+    shape1 = [singleStr11[1] intValue];
+    r_mask = cv::Mat(shape0,shape1,CV_32F,0.0);
+    for(int i=1;i< (int)([allLinedStrings11 count]);i++){
+        NSString* elements = allLinedStrings11[i];
+        
+        NSArray* parts = [elements componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"#"]];
+        for(int j=0;j< shape1;j++){
+            //            NSLog(@"%@",parts[j]);
+            r_mask.at<float>(i-1,j) = [parts[j] floatValue];
+        }
+        
+    }
+    
     self.started=false;
     
     
@@ -493,50 +542,45 @@
 }
 
 -(void)create_new_focal_point:(cv::Mat &)cortImg mat:(cv::Mat &)mat{
-    std::vector<cv::KeyPoint> keypointsLeft;
-    cv::Mat cortLeft_roi = cortImg(cv::Rect(15,15,cortImg.cols/2-30,cortImg.rows-30));
-    cv::FAST(cortLeft_roi, keypointsLeft, 20);
-    
-    
-    
-    std::vector<cv::KeyPoint> keypointsRight;
-    cv::Mat cortRight_roi = cortImg(cv::Rect(cortImg.cols/2+15,15,cortImg.cols/2-30,cortImg.rows-30));
-    cv::FAST(cortRight_roi, keypointsRight, 20);
-    
-    
-    // - reponse for left kp's
-    for(auto &kp : keypointsLeft){
-        kp.response = -1*kp.response;
-        kp.pt.x = kp.pt.x+15;
-        kp.pt.y = kp.pt.y+15;
-        
-        // distance
-        float dx = kp.pt.x - cortImg.cols/2;
-        float dy = kp.pt.y - cortImg.rows/2;
-        float dist = sqrt(dx*dx + dy*dy);
-//        NSLog(@"Distance is : %f",dist);
-//        kp.response=-1*(std::abs(kp.response)+dist);
-        kp.response*=dist;
-        
-    }
-    
-    for(auto &kp : keypointsRight){
-        kp.pt.x = kp.pt.x+15;
-        kp.pt.y = kp.pt.y+15;
-        
-        // distance
-        float dx = kp.pt.x - cortImg.cols/2;
-        float dy = kp.pt.y - cortImg.rows/2;
-        float dist = sqrt(dx*dx + dy*dy);
-//        NSLog(@"Distance is : %f",dist);
-//        kp.response=kp.response+dist;
-        kp.response*=dist;
-    }
     
     std::vector<cv::KeyPoint> keypointsAll;
-    keypointsAll.reserve(keypointsLeft.size()+keypointsRight.size());
-    keypointsAll.insert(keypointsAll.end(),keypointsLeft.begin(),keypointsLeft.end());
-    keypointsAll.insert(keypointsAll.end(),keypointsRight.begin(),keypointsRight.end());
+//    cv::FAST(cortImg, keypointsAll, 20);
+    cv::Ptr<cv::xfeatures2d::SIFT> detector = cv::xfeatures2d::SIFT::create(50);
+    detector->detect(cortImg, keypointsAll);
+//    sift.operator
+    
+    
+    for(cv::KeyPoint kp : keypointsAll){
+        
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+            keyVal[0]=0;
+            keyVal[1]=0;
+            keyVal[2]=255;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+        
+        
+    }
+    
+    // - reponse for left kp's
+    for(auto &kp : keypointsAll){
+        NSLog(@"Keypoints: %f %f %f", kp.pt.x, kp.pt.y, kp.response);
+        if(kp.pt.x<= cortImg.cols/2){
+        kp.response = -1*kp.response;
+            // dont change x and y's for keypoints
+            float dx = std::abs(kp.pt.x - cortImg.cols/2);
+            kp.response = kp.response*dx;
+        }
+        else{
+            // dont change anything
+            kp.pt.x = kp.pt.x - cortImg.cols/2;
+            float dx = std::abs(kp.pt.x - cortImg.cols/2);
+            kp.response = kp.response*dx;
+        }
+        
+        // distance
+        //        kp.response*=dx;
+        
+    }
     
     
     std::sort(keypointsAll.begin(), keypointsAll.end(), [](cv::KeyPoint a, cv::KeyPoint b) { return std::abs(a.response) > std::abs(b.response);});
@@ -554,24 +598,11 @@
         }
     }
     
-    // starting HERE
-    int leftorright=-1;
     for(cv::KeyPoint kp : keypointsAll){
-//    cv::KeyPoint kp = keypointsAll[0];
-    
-    // adding point here for seeing it
-//    kp.pt.x = 10;//cortImg.cols/2-15;
-//    kp.pt.y = 0;//cortImg.rows/4;
-//    kp.response=-1;
-    
-        
-        cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
-
-        cv::Mat locHere;
         if(kp.response<=0){
             NSLog(@"%@",@"LEFT");
-            locHere=L_loc;
-            leftorright=0;
+            //            locHere=L_loc;
+//            leftorright=0;
             cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
             keyVal[0]=255;
             keyVal[1]=0;
@@ -580,13 +611,64 @@
         }
         else{
             NSLog(@"%@",@"RIGHT");
-            locHere=R_loc;
-            leftorright=1;
+            //            locHere=R_loc;
+//            leftorright=1;
             cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
             keyVal[0]=255;
             keyVal[1]=0;
             keyVal[2]=0;
             cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
+        }
+
+    }
+    
+    
+    // starting HERE
+    int leftorright=-1;
+    for(cv::KeyPoint kp : keypointsAll){
+//    cv::KeyPoint kp = keypointsAll[0];
+    
+    // adding point here for seeing it
+//    kp.pt.x = cortImg.cols/2-10;//cortImg.cols/2-15;
+//    kp.pt.y = cortImg.rows-10;//cortImg.rows/4;
+//    kp.response=1;
+    
+        
+        
+//
+//        cv::Mat locHere;
+        if(kp.response<=0){
+            NSLog(@"%@",@"LEFT");
+//            locHere=L_loc;
+            leftorright=0;
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+            keyVal[0]=0;
+            keyVal[1]=0;
+            keyVal[2]=255;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+        }
+        else{
+            NSLog(@"%@",@"RIGHT");
+//            locHere=R_loc;
+            leftorright=1;
+            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
+            keyVal[0]=0;
+            keyVal[1]=0;
+            keyVal[2]=255;
+            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
+        }
+        
+        if(leftorright==0){
+            if ((int)l_mask.at<float>((int)kp.pt.y,(int)kp.pt.x)==0){
+                NSLog(@"%@", @"Bad Edge point on Left");
+                continue;
+            }
+        }else if(leftorright==1)
+        {
+            if ((int)r_mask.at<float>((int)kp.pt.y,(int)kp.pt.x)==0){
+                NSLog(@"%@", @"Bad Edge point on Right");
+                continue;
+            }
         }
         
         
@@ -821,17 +903,7 @@
 //        if(found){break;}
 //    }
     
-    if(!found){
-// random reset
-//        NSLog(@"%@",@"Reseting retina position");
-//        self.x  = (int) (self.retinaRadius+15 + arc4random() % (mat.cols-2*self.retinaRadius-15));
-//        self.y  = (int) (self.retinaRadius+15 + arc4random() % (mat.rows-2*self.retinaRadius-15));
-        if(self.gazePrev==1){
-            self.gazePrev=0;
-        }else if(self.gazePrev==0){
-            self.gazePrev=1;
-        }
-    }
+
     
 }
 
@@ -926,7 +998,7 @@
             
             cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
             cortImg.convertTo(cortImg,CV_8U);
-            
+            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
             [self create_new_focal_point:cortImg mat:mat];
             
             [self gauss_norm_img:oldselfx y:oldselfy shape0:originalStillMat.rows shape1:originalStillMat.cols ];
@@ -935,7 +1007,7 @@
             
             // can convert to rgb inverse here
             cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
-//            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+//
             
             NSLog(@"%d %d",self.y,self.x);
             for(int i=self.y-3;i<self.y+3;i++){
@@ -954,6 +1026,7 @@
         
             
             cv::hconcat(inverse, cortImgPadded, mat);
+//            mat = cortImg;
         }
 
     }
