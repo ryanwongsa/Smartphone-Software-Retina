@@ -33,8 +33,6 @@
     cv::Mat GI;
     cv::Mat loc;
     cv::Mat coeff[8192]; // Hardcoded value, note need to change this depending on coeff file.
-    cv::Mat l_mask;
-    cv::Mat r_mask;
     cv::Mat mask;
 }
 
@@ -46,13 +44,10 @@
 @property BOOL saveNextFrame;
 @property int viewMode;
 @property NSMutableArray* cort_size;
-@property BOOL rotated;
-@property BOOL alreadyLoaded;
 @property BOOL started;
 @property int x;
 @property int y;
 @property int retinaRadius;
-// if 0 then it was previously going left, if 1 then it was previously going right.
 @property int gazePrev;
 @property float xd;
 @property float yd;
@@ -60,6 +55,8 @@
 @property float l_min1;
 @property float r_min0;
 @property float r_min1;
+@property BOOL record;
+@property NSString* fileContents;
 
 - (IBAction)onTapToSetPointOfInterest:(UITapGestureRecognizer *)tapGesture;
 - (IBAction)onColorModeSelected:(UISegmentedControl *)segmentedControl;
@@ -70,10 +67,6 @@
 - (void)processImage:(cv::Mat &)mat;
 - (void)processImageHelper:(cv::Mat &)mat;
 - (void)saveImage:(UIImage *)image;
-- (void)showSaveImageFailureAlertWithMessage:(NSString *)message;
-- (void)showSaveImageSuccessAlertWithImage:(UIImage *)image;
-- (void)startBusyMode;
-- (void)stopBusyMode;
 - (cv::Mat)retina_sample:(int)x y:(int)y mat:(cv::Mat &)mat;
 - (cv::Mat)cort_img:(cv::Mat &)V k_width:(int)k_width sigma:(float)sigma;
 - (cv::Mat)inverse:(cv::Mat &)V x:(int)x y:(int)y shape0:(int)shape0 shape1:(int)shape1;
@@ -96,12 +89,10 @@
 //    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
     
-    
-    // ====================================================================================
     //    Reading loc file
     NSString* filePath = @"locFile";
     NSString* fileRoot = [[NSBundle mainBundle] pathForResource:filePath ofType:@"txt"];
-    //
+    
     NSString* fileContents = [NSString stringWithContentsOfFile:fileRoot encoding:NSUTF8StringEncoding error:nil];
     
     // array of lines
@@ -143,7 +134,6 @@
             for(int j=i+1;j<=i+matSize;j++){
                 elements = allLinedStrings2[j];
                 NSArray* rows = [elements componentsSeparatedByCharactersInSet: [NSCharacterSet characterSetWithCharactersInString:@"#"]];
-                //                    NSLog(@"%@", rows);
                 for(int k=0;k<(int)[rows count];k++){
                     tempMat.at<float>(count,k) = [rows[k] floatValue];
                 }
@@ -185,8 +175,8 @@
     NSString* filePath4 = @"R_file";
     NSString* fileRoot4 = [[NSBundle mainBundle] pathForResource:filePath4 ofType:@"txt"];
     NSString* fileContents4 = [NSString stringWithContentsOfFile:fileRoot4 encoding:NSUTF8StringEncoding error:nil];
-    //
-            // array of lines
+    
+    // array of lines
     NSArray* allLinedStrings4 = [fileContents4 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     NSString* strsInOneLine4 = [allLinedStrings4 objectAtIndex:0];
     NSArray* singleStr4 = [strsInOneLine4 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
@@ -204,8 +194,6 @@
             R.at<float>(i-1,j) = [singleStrs[j] floatValue];
         }
     }
-    
-    //        print(R);
     
     
     // L loc file
@@ -245,7 +233,6 @@
             L_loc.at<float>(i-3,j) = [singleStrs[j] floatValue];
         }
     }
-    //        print(L_loc);
     
     // R loc file
     
@@ -279,9 +266,6 @@
             R_loc.at<float>(i-3,j) = [singleStrs[j] floatValue];
         }
     }
-    
-
-    
     
     // cort_size
     NSString* filePath8 = @"cort_size_file";
@@ -322,13 +306,10 @@
         }
         
         if([elements isEqualToString:@"&"]){
-//            NSLog(@"%d %d", first, second);
             tempMat.copyTo(G[first][second]);
             second++;
             counter=0;
         }
-        
-        
         
         NSArray* parts = [elements componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"#"]];
         for(int j=0;j<(int)[parts count];j++){
@@ -341,59 +322,13 @@
         
         
     }
-    
-    NSString* filePath10 = @"mask_left_file";
-    NSString* fileRoot10 = [[NSBundle mainBundle] pathForResource:filePath10 ofType:@"txt"];
-    NSString* fileContents10 = [NSString stringWithContentsOfFile:fileRoot10 encoding:NSUTF8StringEncoding error:nil];
-    
-    NSArray* allLinedStrings10 = [fileContents10 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
-    
-    NSString* strsInOneLine10 = [allLinedStrings10 objectAtIndex:0];
-    NSArray* singleStr10= [strsInOneLine10 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
-    shape0 = [singleStr10[0] intValue];
-    shape1 = [singleStr10[1] intValue];
-    l_mask = cv::Mat(shape0,shape1,CV_32F,0.0);
-    for(int i=1;i< (int)([allLinedStrings10 count]);i++){
-        NSString* elements = allLinedStrings10[i];
-        
-        NSArray* parts = [elements componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"#"]];
-        for(int j=0;j< shape1;j++){
-//            NSLog(@"%@",parts[j]);
-            l_mask.at<float>(i-1,j) = [parts[j] floatValue];
-        }
-        
-    }
-//    print(l_mask);
 
-    
-    NSString* filePath11 = @"mask_right_file";
-    NSString* fileRoot11 = [[NSBundle mainBundle] pathForResource:filePath11 ofType:@"txt"];
-    NSString* fileContents11 = [NSString stringWithContentsOfFile:fileRoot11 encoding:NSUTF8StringEncoding error:nil];
-    
-    NSArray* allLinedStrings11 = [fileContents11 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
-    
-    NSString* strsInOneLine11 = [allLinedStrings11 objectAtIndex:0];
-    NSArray* singleStr11= [strsInOneLine11 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
-    shape0 = [singleStr11[0] intValue];
-    shape1 = [singleStr11[1] intValue];
-    r_mask = cv::Mat(shape0,shape1,CV_32F,0.0);
-    for(int i=1;i< (int)([allLinedStrings11 count]);i++){
-        NSString* elements = allLinedStrings11[i];
-        
-        NSArray* parts = [elements componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"#"]];
-        for(int j=0;j< shape1;j++){
-            //            NSLog(@"%@",parts[j]);
-            r_mask.at<float>(i-1,j) = [parts[j] floatValue];
-        }
-        
-    }
-    
     NSString* filePath12 = @"mask_file";
     NSString* fileRoot12 = [[NSBundle mainBundle] pathForResource:filePath12 ofType:@"txt"];
     NSString* fileContents12 = [NSString stringWithContentsOfFile:fileRoot12 encoding:NSUTF8StringEncoding error:nil];
     
     NSArray* allLinedStrings12 = [fileContents12 componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
-//
+
     NSString* strsInOneLine12 = [allLinedStrings12 objectAtIndex:0];
     NSArray* singleStr12= [strsInOneLine12 componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
     shape0 = [singleStr12[0] intValue];
@@ -404,17 +339,13 @@
         
         NSArray* parts = [elements componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"#"]];
         for(int j=0;j< shape1;j++){
-            //            NSLog(@"%@",parts[j]);
             mask.at<unsigned char>(i-1,j) = (unsigned char)[parts[j] intValue];
         }
-        
     }
-//    print(mask);
-    
-    
     
     self.started=false;
     
+    self.fileContents=@"";
     
 }
 
@@ -441,6 +372,7 @@
             break;
         case 3:
             self.viewMode = 3;
+            self.record=true;
             break;
         default:
             self.viewMode = 0;
@@ -499,7 +431,6 @@
         //cv::cvtColor(originalStillMat, updatedStillMatRetina, cv::COLOR_RGBA2GRAY);
         originalStillMat.copyTo(updatedStillMatRetina);
         
-        
         // processimage to update it.
         [self processImage:updatedStillMatRetina];
         image = MatToUIImage(updatedStillMatRetina);
@@ -546,7 +477,6 @@
             x2=shape1-1;
         }
         
-        //        NSLog(@"%d %d %d %d", x1, x2, y1, y2);
         cv::Mat GI_roi = GI(cv::Rect(x1,y1,x2-x1,y2-y1));
         
         
@@ -559,7 +489,6 @@
         int begY = shape0_coeff/2.0-(y2-y1)/2.0;
         int endY = shape0_coeff/2.0+(y2-y1)/2.0;
         
-        //        NSLog(@"%d %d %d %d", begX, endX, begY, endY);
         
         cv::Mat coeff_roi =coeff[i](cv::Rect(begX,begY,endX-begX,endY-begY));
         
@@ -578,11 +507,11 @@
     
     for(cv::KeyPoint kp : keypointsAll){
         
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
-            keyVal[0]=0;
-            keyVal[1]=0;
-            keyVal[2]=255;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+        keyVal[0]=0;
+        keyVal[1]=0;
+        keyVal[2]=255;
+        cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
         
     }
     
@@ -629,12 +558,10 @@
     // Choose a random start
     if(self.gazePrev==-1){
         self.gazePrev = ( arc4random() % 4 ) +1;
-        NSLog(@"RANDOM GAZE: %d",self.gazePrev);
     }
     else
     {
         int prob = arc4random() % 100;
-        NSLog(@"PREVIOUS GAZE: %d",self.gazePrev);
         if(prob <= 50){
         } else if(prob <= 70){
             self.gazePrev = (self.gazePrev+1)%4;
@@ -648,7 +575,6 @@
             self.gazePrev=4;
         }
     }
-    NSLog(@"NEW GAZE: %d",self.gazePrev);
     
     
     // Could remove this part, just for visualisation
@@ -772,7 +698,6 @@
             int tempGaze = kp.class_id;
 
             if((tempGaze==self.gazePrev) ||(self.gazePrev==-1)){
-                NSLog(@"FOUND ONE TO USE: %f %f", finalX, finalY);
                 self.x = tempInverseX;
                 self.y = tempInverseY;
                 found=true;
@@ -865,11 +790,9 @@
             cv::minMaxLoc(loc.col(1), &minVal1, &maxVal1);
             
             self.retinaRadius = (int)(std::max(maxVal0,maxVal1));
-            NSLog(@"Retina Radius is: %d", self.retinaRadius);
             
             self.gazePrev=-1;
         }
-        
         
         
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
@@ -887,11 +810,32 @@
             cv::Mat inverse = [self inverse:V x:self.x y:self.y shape0:shape0 shape1:shape1];
             
             
-            
             inverse.convertTo(inverse,CV_8U);
             mat = inverse;
         }
         else if(self.viewMode==3){
+            
+            if(self.record){
+                std::stringstream origImg;
+                origImg << mat;
+                NSString *stringImgVersion = [NSString stringWithCString:origImg.str().c_str() encoding:NSASCIIStringEncoding];
+                
+                self.fileContents = [NSString stringWithFormat:@"%@%@\n", self.fileContents, stringImgVersion];
+                
+                std::stringstream ss;
+                ss << V;
+                NSString *stringVersion = [NSString stringWithCString:ss.str().c_str() encoding:NSASCIIStringEncoding];
+                
+//                [self.fileContents appendString:stringVersion];
+                self.fileContents = [NSString stringWithFormat:@"%@%d %d\n", self.fileContents,
+                                     self.x, self.y ];
+                self.fileContents = [NSString stringWithFormat:@"%@%@\n", self.fileContents,
+                                      stringVersion];
+                NSLog(@"Contents now: %lu",(unsigned long)self.fileContents.length);
+            }
+            
+            
+            
             // creating cortical image
             int oldselfx = self.x;
             int oldselfy = self.y;
@@ -907,9 +851,7 @@
             
             // can convert to rgb inverse here
             cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
-//
-            
-            NSLog(@"%d %d",self.y,self.x);
+
             for(int i=self.y-3;i<self.y+3;i++){
                 for(int j=self.x-3;j<self.x+3;j++){
                     cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
@@ -920,10 +862,8 @@
                 }
             }
             
-            
             cv::Mat cortImgPadded;
             cv::copyMakeBorder(cortImg, cortImgPadded, (inverse.rows-cortImg.rows)/2+1, (inverse.rows-cortImg.rows)/2, 0, 0, cv::BORDER_CONSTANT,cv::Scalar(0));
-        
             
             cv::hconcat(inverse, cortImgPadded, mat);
 //            mat = cortImg;
@@ -973,7 +913,6 @@
             x2=shape1-1;
         }
         
-        //        NSLog(@"%d %d %d %d", x1, x2, y1, y2);
         cv::Mat I1_roi = I1(cv::Rect(x1,y1,x2-x1,y2-y1));
         I1_roi.convertTo(I1_roi,CV_32F);
         cv::Mat multied;
@@ -987,14 +926,8 @@
         int begY = shape0_coeff/2.0-(y2-y1)/2.0;
         int endY = shape0_coeff/2.0+(y2-y1)/2.0;
         
-        //        NSLog(@"%d %d %d %d", begX, endX, begY, endY);
-        
         cv::Mat coeff_roi =coeff[i](cv::Rect(begX,begY,endX-begX,endY-begY));
-        //        NSLog(@"%d %d %d %d", extract.rows, extract.cols, coeff[i].rows, coeff[i].cols);
-        //        cv::multiply(extract,coeff[i],multied);
-//        cv::multiply(extract,coeff_roi,multied);
-//        NSLog(@"%d %d", coeff_roi.type(), I1_roi.type());
-//        NSLog(@"%f",V.at<float>(i));
+       
         
         if(V.at<float>(i)!=0.0){
             cv::Mat tempMat = V.at<float>(i) * coeff_roi;
@@ -1002,7 +935,6 @@
             tempMat.convertTo(tempMat2, CV_32F);
             cv::add(I1_roi,tempMat2,I1_roi);
         }
-//        NSLog(@"%@",@"GOTHERE");
         
     }
     cv::divide(I1, GI, I);
@@ -1055,7 +987,6 @@
             x2=shape1-1;
         }
         
-//        NSLog(@"%d %d %d %d", x1, x2, y1, y2);
         cv::Mat extract = copyMat(cv::Rect(x1,y1,x2-x1,y2-y1));
         extract.convertTo(extract, CV_32F);
         
@@ -1070,13 +1001,9 @@
         int begY = shape0_coeff/2.0-(y2-y1)/2.0;
         int endY = shape0_coeff/2.0+(y2-y1)/2.0;
         
-//        NSLog(@"%d %d %d %d", begX, endX, begY, endY);
         
         cv::Mat coeff_roi =coeff[i](cv::Rect(begX,begY,endX-begX,endY-begY));
-//        NSLog(@"%d %d %d %d", extract.rows, extract.cols, coeff[i].rows, coeff[i].cols);
-//        cv::multiply(extract,coeff[i],multied);
         cv::multiply(extract,coeff_roi,multied);
-//        NSLog(@"%f", cv::sum(multied)[0]);
         V.at<float>(i) = cv::sum(multied)[0];
 
     }
@@ -1093,7 +1020,6 @@
     cv::Mat R_img  = cv::Mat(shape0,shape1, CV_32F, 0.0);
     cv::Mat L_gimg = cv::Mat(shape0,shape1, CV_32F, 0.0);
     cv::Mat R_gimg = cv::Mat(shape0,shape1, CV_32F, 0.0);
-
  
     // L
     for(int p=0;p<(int)(L_loc.rows);p++){
@@ -1142,24 +1068,18 @@
         
         cv::Mat g = G[dx][dy](cv::Rect(0,0,x2-x1,y2-y1));
         
-//        NSLog(@"%d %d %d %d", x1,x2,y1,y2);
         
         cv::Mat L_img_roi = L_img(cv::Rect(x1,y1,x2-x1,y2-y1));
         cv::Mat L_gimg_roi = L_gimg(cv::Rect(x1,y1,x2-x1,y2-y1));
-//        cv::Mat gV = (g*V.at<float>((int)(p2)));
-//        NSLog(@"%d %d %d %d",gV.rows, gV.cols, L_img_roi.rows, L_img_roi.cols);
         
         cv::add(L_img_roi,g*V.at<float>((int)(p2)),L_img_roi);
         cv::add(L_gimg_roi,g,L_gimg_roi);
-//
+
     }
     
-    cv::Mat left;// = cv::Mat(L_img.rows,L_img.cols,CV_8U);
+    cv::Mat left;
     cv::divide(L_img, L_gimg, left);
-
-//    print(left);
-//
-//    
+ 
     // R
     for(int p=0;p<(int)(R_loc.rows);p++){
         float p0 =R_loc.at<float>(p,0);
@@ -1206,103 +1126,40 @@
         
         cv::Mat g = G[dx][dy](cv::Rect(0,0,x2-x1,y2-y1));
         
-        //        NSLog(@"%d %d %d %d", x1,x2,y1,y2);
-        
         cv::Mat R_img_roi = R_img(cv::Rect(x1,y1,x2-x1,y2-y1));
         cv::Mat R_gimg_roi = R_gimg(cv::Rect(x1,y1,x2-x1,y2-y1));
-        //        cv::Mat gV = (g*V.at<float>((int)(p2)));
-        //        NSLog(@"%d %d %d %d",gV.rows, gV.cols, L_img_roi.rows, L_img_roi.cols);
         
         cv::add(R_img_roi,g*V.at<float>((int)(p2)),R_img_roi);
         cv::add(R_gimg_roi,g,R_gimg_roi);
-        //
     }
-    
-    cv::Mat right;// = cv::Mat(L_img.rows,L_img.cols,CV_8U);
+    cv::Mat right;
     cv::divide(R_img, R_gimg, right);
     
-//    print(right);
-    
-    
-//    NSLog(@"%@",@"Completed cortical image");
     cv::rotate(left, left, 2);
     cv::rotate(right, right, 0);
     cv::hconcat(left,right, cortImg);
-//    NSLog(@"check check %d %d %d %d %d %d",left.rows, left.cols,right.rows, right.cols,cortImg.rows, cortImg.cols);
     return cortImg;
 }
 
--(void)startBusyMode{
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self.activityIndicatorView startAnimating];
-        for (UIBarItem *item in self.toolbar.items){
-            item.enabled = NO;
-        }
-    });
-}
-
--(void)stopBusyMode {
-    dispatch_async(dispatch_get_main_queue(),^{
-        [self.activityIndicatorView stopAnimating];
-        for (UIBarItem *item in self.toolbar.items){
-            item.enabled=YES;
-        }
-    });
-}
-
 -(IBAction)onSaveButtonPressed{
-    [self startBusyMode];
-    if(self.videoCamera.running){
-        self.saveNextFrame = YES;
-    } else {
-        [self saveImage:self.imageView.image];
-    }
+    self.record = false;
+    NSArray *paths = NSSearchPathForDirectoriesInDomains
+    (NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths objectAtIndex:0];
+    NSLog(@"HERE IS THE DIRECTORY: %@", documentsDirectory);
+
+    NSString *fileName = [NSString stringWithFormat:@"%@/data.txt", documentsDirectory];
+//    NSLog(@"Contents %@",self.fileContents);
+    NSLog(@"Contents SIZE: %lu",(unsigned long)self.fileContents.length);
+    NSString *content = self.fileContents;
+    [content writeToFile:fileName atomically:NO encoding:NSStringEncodingConversionAllowLossy error:nil];
+    self.fileContents = @"";
+    
 }
 
 -(void)saveImage:(UIImage *)image{
-    // Try to save the image to a temporary file.
-    NSString *outputPath = [NSString stringWithFormat:@"%@%@", NSTemporaryDirectory(),@"output.png"];
-    if(![UIImagePNGRepresentation(image) writeToFile:outputPath atomically:YES]){
-        // Show an alert describing the failure.
-        [self showSaveImageFailureAlertWithMessage:@"The image could not be saved to the temporary directory."];
-        return;
-    }
-    
-    // Try to add the image to the Photos library.
-    NSURL *outputURL = [NSURL URLWithString:outputPath];
-    PHPhotoLibrary *photoLibrary = [PHPhotoLibrary sharedPhotoLibrary];
-    [photoLibrary performChanges:^{[PHAssetChangeRequest creationRequestForAssetFromImageAtFileURL:outputURL];}  completionHandler:^(BOOL success, NSError *error){
-        if (success) {
-            // Show an alert describing the success, with sharing options
-            [self showSaveImageSuccessAlertWithImage:image];
-        } else {
-            // Show an alert describing the failure.
-            [self showSaveImageFailureAlertWithMessage:error.localizedDescription];
-        }
-    }];
-}
-
--(void)showSaveImageFailureAlertWithMessage:(NSString *)message {
-    UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Failed to save image" message:message preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
-        [self stopBusyMode];
-    }];
-    [alert addAction:okAction];
-    [self presentViewController:alert animated:YES completion:nil];
-}
-
--(void)showSaveImageSuccessAlertWithImage:(UIImage *)image {
-    // Create a "Saved image" alert.
-    UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Saved image" message :@"The image has been added to your Photos library." preferredStyle:UIAlertControllerStyleAlert];
     
     
-    UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action){
-        [self stopBusyMode];
-    }];
-    [alert addAction:okAction];
-
-    // Show the alert.
-    [self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)didReceiveMemoryWarning {
