@@ -28,7 +28,7 @@
                                     <outletCollection property="gestureRecognizers" destination="Vum-m5-XXt" appends="YES" id="T1a-e1-Yc5"/>
                                 </connections>
                             </imageView>
-                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" alpha="0.45000000000000001" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aEu-kK-2H7">
+                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" alpha="0.80000000000000004" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aEu-kK-2H7">
                                 <rect key="frame" x="0.0" y="331" width="667" height="44"/>
                                 <items>
                                     <barButtonItem style="plain" id="Prc-2A-aQl">
@@ -38,7 +38,7 @@
                                             <segments>
                                                 <segment title="Colour"/>
                                                 <segment title="Cortex"/>
-                                                <segment title="Inverse"/>
+                                                <segment title="Back"/>
                                                 <segment title="Combined"/>
                                             </segments>
                                             <connections>

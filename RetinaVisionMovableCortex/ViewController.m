@@ -80,7 +80,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    UIImage *originalStillImage = [UIImage imageNamed:@"leopard.jpg"];
+    UIImage *originalStillImage = [UIImage imageNamed:@"leopard.png"];
     UIImageToMat(originalStillImage, originalStillMat);
     
     self.videoCamera = [[VideoCamera alloc] initWithParentView:self.imageView];
@@ -88,6 +88,8 @@
     self.videoCamera.defaultAVCaptureSessionPreset  = AVCaptureSessionPreset1280x720;
 //    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
+    
+//    NSDate *methodStart = [NSDate date];
     
     //    Reading loc file
     NSString* filePath = @"locFile";
@@ -103,7 +105,7 @@
     NSArray* singleStr = [strsInOneLine componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@" "]];
     int shape0 = [singleStr[0] intValue];
     int shape1 = [singleStr[1] intValue];
-    NSLog(@"%d %d", shape0, shape1);
+//    NSLog(@"%d %d", shape0, shape1);
     loc = cv::Mat(shape0, shape1, CV_32F,0.0);
     
     for(int i=1;i< (int)([allLinedStrings count]-1);i++){
@@ -253,7 +255,7 @@
     
     self.r_min0 = [singleStr6[0] floatValue];
     self.r_min1 = [singleStr6[1] floatValue];
-    NSLog(@"%f %f %f %f %f %f", self.yd, self.xd,self.l_min0, self.l_min1, self.r_min0, self.r_min1);
+//    NSLog(@"%f %f %f %f %f %f", self.yd, self.xd,self.l_min0, self.l_min1, self.r_min0, self.r_min1);
     
     R_loc = cv::Mat(shape0,shape1,CV_32F ,0.0);
     
@@ -277,7 +279,7 @@
     self.cort_size = [[NSMutableArray alloc] init];
     self.cort_size[0] = allLinedStrings8[0];
     self.cort_size[1] = allLinedStrings8[1];
-    NSLog(@"%@", self.cort_size);
+//    NSLog(@"%@", self.cort_size);
     
     // G
     NSString* filePath9 = @"G_file";
@@ -347,6 +349,9 @@
     
     self.fileContents=@"";
     
+//    NSDate *methodFinish = [NSDate date];
+//    NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
+//    NSLog(@"EXECUTION TIME: %f", executionTime);
 }
 
 
@@ -505,15 +510,15 @@
 //    sift.operator
     
     
-    for(cv::KeyPoint kp : keypointsAll){
-        
-        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
-        keyVal[0]=0;
-        keyVal[1]=0;
-        keyVal[2]=255;
-        cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
-        
-    }
+//    for(cv::KeyPoint kp : keypointsAll){
+//        
+//        cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+//        keyVal[0]=0;
+//        keyVal[1]=0;
+//        keyVal[2]=255;
+//        cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+//        
+//    }
     
     // 1= first quad, 2 = second quad, 3 = third quad, 4 = forth quad
     for(auto &kp : keypointsAll){
@@ -578,23 +583,23 @@
     
     
     // Could remove this part, just for visualisation
-    for(cv::KeyPoint kp : keypointsAll){
-        if((kp.class_id ==2)||(kp.class_id==3)){
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
-            keyVal[0]=255;
-            keyVal[1]=0;
-            keyVal[2]=0;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
-        }
-        else{
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
-            keyVal[0]=255;
-            keyVal[1]=0;
-            keyVal[2]=0;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
-        }
-
-    }
+//    for(cv::KeyPoint kp : keypointsAll){
+//        if((kp.class_id ==2)||(kp.class_id==3)){
+//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+//            keyVal[0]=255;
+//            keyVal[1]=0;
+//            keyVal[2]=0;
+//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+//        }
+//        else{
+//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
+//            keyVal[0]=255;
+//            keyVal[1]=0;
+//            keyVal[2]=0;
+//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
+//        }
+//
+//    }
     
     
     for(cv::KeyPoint kp : keypointsAll){
@@ -603,22 +608,22 @@
             continue;
         }
         
-        if((kp.class_id ==2)||(kp.class_id==3)){
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
-            keyVal[0]=0;
-            keyVal[1]=0;
-            keyVal[2]=255;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
-        }
-        else{
-            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
-            keyVal[0]=0;
-            keyVal[1]=0;
-            keyVal[2]=255;
-            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
-        }
-        float yPoint = kp.pt.y;
-        float xPoint = kp.pt.x;
+//        if((kp.class_id ==2)||(kp.class_id==3)){
+//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x);
+//            keyVal[0]=0;
+//            keyVal[1]=0;
+//            keyVal[2]=255;
+//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x) = keyVal;
+//        }
+//        else{
+//            cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0);
+//            keyVal[0]=0;
+//            keyVal[1]=0;
+//            keyVal[2]=255;
+//            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
+//        }
+//        float yPoint = kp.pt.y;
+//        float xPoint = kp.pt.x;
         
         kp.pt.y = -kp.pt.y;
 
@@ -702,20 +707,20 @@
                 self.y = tempInverseY;
                 found=true;
                 self.gazePrev =tempGaze;
-                if((kp.class_id ==2)||(kp.class_id==3)){
-                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(yPoint,xPoint);
-                    keyVal[0]=0;
-                    keyVal[1]=255;
-                    keyVal[2]=0;
-                    cortImg.at<cv::Vec3b>(yPoint,xPoint) = keyVal;
-                }
-                else{
-                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(yPoint,xPoint+cortImg.cols/2.0);
-                    keyVal[0]=0;
-                    keyVal[1]=255;
-                    keyVal[2]=0;
-                    cortImg.at<cv::Vec3b>(yPoint,xPoint+cortImg.cols/2.0) = keyVal;
-                }
+//                if((kp.class_id ==2)||(kp.class_id==3)){
+//                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(yPoint,xPoint);
+//                    keyVal[0]=0;
+//                    keyVal[1]=255;
+//                    keyVal[2]=0;
+//                    cortImg.at<cv::Vec3b>(yPoint,xPoint) = keyVal;
+//                }
+//                else{
+//                    cv::Vec3b keyVal = cortImg.at<cv::Vec3b>(yPoint,xPoint+cortImg.cols/2.0);
+//                    keyVal[0]=0;
+//                    keyVal[1]=255;
+//                    keyVal[2]=0;
+//                    cortImg.at<cv::Vec3b>(yPoint,xPoint+cortImg.cols/2.0) = keyVal;
+//                }
                 break;
             }
         }
@@ -797,12 +802,21 @@
         
         cv::cvtColor(mat, mat, cv::COLOR_RGBA2GRAY);
         
+//        start timer here
+        
+//        NSDate *methodStart = [NSDate date];
         cv::Mat V = [self retina_sample:self.x y:self.y mat:mat];
+        
+//        NSDate *methodFinish = [NSDate date];
+//        NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
+//        NSLog(@"EXECUTION RETINA SAMPLING TIME: %f", executionTime);
+        
         
         if (self.viewMode == 1){
             cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
             cortImg.convertTo(cortImg,CV_8U);
             mat = cortImg;
+            
         }
         else if(self.viewMode==2){
             // Inverse Image
@@ -812,27 +826,29 @@
             
             inverse.convertTo(inverse,CV_8U);
             mat = inverse;
+            
         }
         else if(self.viewMode==3){
-            
-            if(self.record){
-                std::stringstream origImg;
-                origImg << mat;
-                NSString *stringImgVersion = [NSString stringWithCString:origImg.str().c_str() encoding:NSASCIIStringEncoding];
-                
-                self.fileContents = [NSString stringWithFormat:@"%@%@\n", self.fileContents, stringImgVersion];
-                
-                std::stringstream ss;
-                ss << V;
-                NSString *stringVersion = [NSString stringWithCString:ss.str().c_str() encoding:NSASCIIStringEncoding];
-                
-//                [self.fileContents appendString:stringVersion];
-                self.fileContents = [NSString stringWithFormat:@"%@%d %d\n", self.fileContents,
-                                     self.x, self.y ];
-                self.fileContents = [NSString stringWithFormat:@"%@%@\n", self.fileContents,
-                                      stringVersion];
-                NSLog(@"Contents now: %lu",(unsigned long)self.fileContents.length);
-            }
+
+//            RECORDING DATA - UNCOMMENT TO ADD RECORDING BACK
+//            if(self.record){
+//                std::stringstream origImg;
+//                origImg << mat;
+//                NSString *stringImgVersion = [NSString stringWithCString:origImg.str().c_str() encoding:NSASCIIStringEncoding];
+//                
+//                self.fileContents = [NSString stringWithFormat:@"%@%@\n", self.fileContents, stringImgVersion];
+//                
+//                std::stringstream ss;
+//                ss << V;
+//                NSString *stringVersion = [NSString stringWithCString:ss.str().c_str() encoding:NSASCIIStringEncoding];
+//                
+////                [self.fileContents appendString:stringVersion];
+//                self.fileContents = [NSString stringWithFormat:@"%@%d %d\n", self.fileContents,
+//                                     self.x, self.y ];
+//                self.fileContents = [NSString stringWithFormat:@"%@%@\n", self.fileContents,
+//                                      stringVersion];
+//                NSLog(@"Contents now: %lu",(unsigned long)self.fileContents.length);
+//            }
             
             
             
@@ -842,31 +858,41 @@
             
             cv::Mat cortImg =[self cort_img:V k_width:7 sigma:0.8];
             cortImg.convertTo(cortImg,CV_8U);
-            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+//            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
+            
+//            REMOVING FOCAL POINT CHANGES
+//            NSDate *methodStart = [NSDate date];
+
             [self create_new_focal_point:cortImg mat:mat];
+            
+//            NSDate *methodFinish = [NSDate date];
+//            NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
+//            NSLog(@"EXECUTION FOCAL POINT TIME: %f", executionTime);
+
+            
             
             [self gauss_norm_img:oldselfx y:oldselfy shape0:originalStillMat.rows shape1:originalStillMat.cols ];
             cv::Mat inverse = [self inverse:V x:oldselfx y:oldselfy shape0:shape0 shape1:shape1];
             inverse.convertTo(inverse,CV_8U);
             
             // can convert to rgb inverse here
-            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
+//            cv::cvtColor(inverse, inverse, cv::COLOR_GRAY2RGB);
 
-            for(int i=self.y-3;i<self.y+3;i++){
-                for(int j=self.x-3;j<self.x+3;j++){
-                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
-                    keyVal[0]=255;
-                    keyVal[1]=0;
-                    keyVal[2]=0;
-                    inverse.at<cv::Vec3b>(i,j) = keyVal;
-                }
-            }
+//            for(int i=self.y-3;i<self.y+3;i++){
+//                for(int j=self.x-3;j<self.x+3;j++){
+//                    cv::Vec3b keyVal = inverse.at<cv::Vec3b>(i,j);
+//                    keyVal[0]=255;
+//                    keyVal[1]=0;
+//                    keyVal[2]=0;
+//                    inverse.at<cv::Vec3b>(i,j) = keyVal;
+//                }
+//            }
             
             cv::Mat cortImgPadded;
             cv::copyMakeBorder(cortImg, cortImgPadded, (inverse.rows-cortImg.rows)/2+1, (inverse.rows-cortImg.rows)/2, 0, 0, cv::BORDER_CONSTANT,cv::Scalar(0));
             
             cv::hconcat(inverse, cortImgPadded, mat);
-//            mat = cortImg;
+            //            mat = cortImg;
         }
 
     }
