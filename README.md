@@ -64,4 +64,7 @@ iOS application to provide a live preview of retinal transformed images. The app
 	- Added functionality for gaze control
 	- Recording of retinal tranformation image data functionality is initially commented out as it takes up a lot of storage when saved.
 
+## Video Demo
 
+A video demo is available in the following file:
+ - SmartphoneSoftwareRetina.m4v
