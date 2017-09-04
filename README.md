@@ -59,8 +59,9 @@ iOS application to simulate human retina vision
 - RetinaVisionPrep
 	- retina vision with preprocessed files (generated offline) to reduce runtime computation
 
-- RetinaVisionMovableCortex
+- RetinaVisionMovableCortex (Latest and version with most features)
 	- Similar setup as to RetinaVisionPrep
 	- Added functionality for gaze control
+	- Recording of retinal tranformation image data functionality is initially commented out as it takes up a lot of storage when saved.
 
 
