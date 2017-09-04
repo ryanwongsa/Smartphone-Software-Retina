@@ -1,5 +1,5 @@
 # Smartphone-Software-Retina
-iOS application to simulate human retina vision
+iOS application to provide a live preview of retinal transformed images. The application can also automatically record cortical data sets of different points of interest using a gaze control mechanism.
 
 ## Requirements to install application
 - iOS 10.1 or newer
