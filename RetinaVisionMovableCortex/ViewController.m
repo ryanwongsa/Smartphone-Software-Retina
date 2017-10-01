@@ -80,7 +80,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
-    UIImage *originalStillImage = [UIImage imageNamed:@"leopard.png"];
+    UIImage *originalStillImage = [UIImage imageNamed:@"cherry.JPG"];
     UIImageToMat(originalStillImage, originalStillMat);
     
     self.videoCamera = [[VideoCamera alloc] initWithParentView:self.imageView];
@@ -89,7 +89,7 @@
 //    self.videoCamera.defaultFPS = 30;
     self.videoCamera.letterboxPreview = YES;
     
-//    NSDate *methodStart = [NSDate date];
+    NSDate *methodStart = [NSDate date];
     
     //    Reading loc file
     NSString* filePath = @"locFile";
@@ -349,8 +349,8 @@
     
     self.fileContents=@"";
     
-//    NSDate *methodFinish = [NSDate date];
-//    NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
+    NSDate *methodFinish = [NSDate date];
+    NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
 //    NSLog(@"EXECUTION TIME: %f", executionTime);
 }
 
@@ -622,8 +622,8 @@
 //            keyVal[2]=255;
 //            cortImg.at<cv::Vec3b>(kp.pt.y,kp.pt.x+cortImg.cols/2.0) = keyVal;
 //        }
-//        float yPoint = kp.pt.y;
-//        float xPoint = kp.pt.x;
+        float yPoint = kp.pt.y;
+        float xPoint = kp.pt.x;
         
         kp.pt.y = -kp.pt.y;
 
@@ -804,11 +804,11 @@
         
 //        start timer here
         
-//        NSDate *methodStart = [NSDate date];
+        NSDate *methodStart = [NSDate date];
         cv::Mat V = [self retina_sample:self.x y:self.y mat:mat];
         
-//        NSDate *methodFinish = [NSDate date];
-//        NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
+        NSDate *methodFinish = [NSDate date];
+        NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
 //        NSLog(@"EXECUTION RETINA SAMPLING TIME: %f", executionTime);
         
         
@@ -830,7 +830,7 @@
         }
         else if(self.viewMode==3){
 
-//            RECORDING DATA - UNCOMMENT TO ADD RECORDING BACK
+//            RECORDING DATA
 //            if(self.record){
 //                std::stringstream origImg;
 //                origImg << mat;
@@ -861,12 +861,12 @@
 //            cv::cvtColor(cortImg, cortImg, cv::COLOR_GRAY2RGB);
             
 //            REMOVING FOCAL POINT CHANGES
-//            NSDate *methodStart = [NSDate date];
+            NSDate *methodStart = [NSDate date];
 
             [self create_new_focal_point:cortImg mat:mat];
             
-//            NSDate *methodFinish = [NSDate date];
-//            NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
+            NSDate *methodFinish = [NSDate date];
+            NSTimeInterval executionTime = [methodFinish timeIntervalSinceDate:methodStart];
 //            NSLog(@"EXECUTION FOCAL POINT TIME: %f", executionTime);
 
             

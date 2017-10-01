@@ -21,14 +21,14 @@
                         <rect key="frame" x="0.0" y="0.0" width="667" height="375"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="leopard.jpg" translatesAutoresizingMaskIntoConstraints="NO" id="QUx-mG-Ape">
+                            <imageView contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="cherry.JPG" translatesAutoresizingMaskIntoConstraints="NO" id="QUx-mG-Ape">
                                 <rect key="frame" x="0.0" y="0.0" width="667" height="375"/>
                                 <gestureRecognizers/>
                                 <connections>
                                     <outletCollection property="gestureRecognizers" destination="Vum-m5-XXt" appends="YES" id="T1a-e1-Yc5"/>
                                 </connections>
                             </imageView>
-                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" alpha="0.80000000000000004" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aEu-kK-2H7">
+                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" alpha="0.050000000000000003" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aEu-kK-2H7">
                                 <rect key="frame" x="0.0" y="331" width="667" height="44"/>
                                 <items>
                                     <barButtonItem style="plain" id="Prc-2A-aQl">
@@ -95,6 +95,6 @@
     </scenes>
     <resources>
         <image name="SwitchCamera.png" width="25" height="25"/>
-        <image name="leopard.jpg" width="1280" height="720"/>
+        <image name="cherry.JPG" width="1280" height="720"/>
     </resources>
 </document>
